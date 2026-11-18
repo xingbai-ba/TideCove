@@ -1,0 +1,16 @@
+{
+  "port": 8080,
+  "dshUrl": "auto",
+  "replyTimeoutMs": 180000,
+  "onebot": {
+    "enabled": true,
+    "reportUrl": "",
+    "secret": ""
+  },
+  "tools": {
+    "enabled": false,
+    "python": "",
+    "ttsUrl": ""
+  },
+  "_说明": "本版不含长期记忆/数据库，对话上下文由 DeepSeek Harness 的会话管理负责。OneBot 是可选兼容层（/onebot/v11/），reportUrl 留空则只走 WebSocket。tools 是画图/语音工具，默认关闭——想用就填自己的 python 路径和 TTS 地址，不需要就保持 false。"
+}

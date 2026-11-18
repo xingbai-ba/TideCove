@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>TideCove</title>
+<link rel="manifest" href="/manifest.json">
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-2: #1e222b;
+    --line: #262b36;
+    --text: #e8ecf3;
+    --muted: #8b93a3;
+    --accent: #7c5cff;
+    --accent-2: #a78bfa;
+    --bubble-me: #6d4dfa;
+    --bubble-ai: #1f2430;
+    --danger: #ff6b6b;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    display: flex; flex-direction: column;
+    height: 100dvh; overflow: hidden;
+  }
+  header {
+    flex: 0 0 auto; padding: 14px 16px 10px;
+    background: linear-gradient(180deg, rgba(124,92,255,.10), transparent);
+    display: flex; align-items: center; gap: 10px;
+    padding-top: calc(14px + env(safe-area-inset-top));
+  }
+  header .avatar {
+    width: 34px; height: 34px; border-radius: 12px;
+    background: linear-gradient(135deg, #7c5cff, #4dd4ff);
+    display: grid; place-items: center; font-size: 17px; flex: 0 0 auto;
+  }
+  header .name { font-weight: 600; font-size: 16px; }
+  header .sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  header .dot { width: 7px; height: 7px; border-radius: 50%; background: #3ddc97; margin-left: auto; }
+  header .dot.off { background: #ff6b6b; }
+  header .dot.wait { background: #ffb020; }
+
+  #login { flex: 1; display: grid; place-items: center; padding: 24px; }
+  .card {
+    width: 100%; max-width: 360px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 20px; padding: 26px 22px;
+  }
+  .card h1 { font-size: 20px; margin: 0 0 6px; }
+  .card p { color: var(--muted); font-size: 13px; line-height: 1.7; margin: 0 0 18px; }
+  .code-input {
+    width: 100%; font-size: 30px; letter-spacing: 12px; text-align: center;
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 14px; padding: 16px 10px; outline: none; font-family: ui-monospace, monospace;
+  }
+  .code-input:focus { border-color: var(--accent); }
+  .btn {
+    width: 100%; margin-top: 14px; padding: 14px; border: 0; border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent), #5b8cff); color: white;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .btn:active { transform: scale(.98); }
+  .hint { margin-top: 12px; font-size: 12px; color: var(--muted); text-align: center; min-height: 16px; }
+  .hint.err { color: var(--danger); }
+
+  #chat { flex: 1; overflow-y: auto; padding: 14px 14px 6px; scroll-behavior: auto; }
+  .msg { display: flex; margin-bottom: 12px; }
+  .msg.me { justify-content: flex-end; }
+  .bubble {
+    max-width: 82%; padding: 10px 13px; border-radius: 16px;
+    font-size: 15px; line-height: 1.55; word-break: break-word; white-space: pre-wrap;
+  }
+  .msg.me .bubble { background: var(--bubble-me); border-bottom-right-radius: 5px; }
+  .msg.ai .bubble { background: var(--bubble-ai); border: 1px solid var(--line); border-bottom-left-radius: 5px; }
+  .bubble img { max-width: 100%; border-radius: 10px; display: block; }
+  .imgwrap { position: relative; display: inline-block; margin-top: 6px; }
+  .imgwrap img { display: block; max-width: 100%; border-radius: 10px; }
+  .imgwrap .uploading {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    background: rgba(0,0,0,.38); border-radius: 10px;
+  }
+  .imgwrap .spin {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2.5px solid rgba(255,255,255,.25); border-top-color: #fff;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .imgwrap.failed::after {
+    content: '上传失败'; position: absolute; inset: 0; display: grid; place-items: center;
+    background: rgba(120,20,30,.55); border-radius: 10px; font-size: 12px; color: #ffd0d0;
+  }
+  .bubble audio { margin-top: 6px; width: 220px; max-width: 100%; }
+  .meta { font-size: 10px; color: var(--muted); margin-top: 4px; text-align: right; }
+  .msg.ai .meta { text-align: left; }
+
+  .typing { display: inline-flex; gap: 4px; padding: 4px 2px; }
+  .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2); animation: blink 1.2s infinite; }
+  .typing i:nth-child(2) { animation-delay: .2s; }
+  .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%,80%,100% { opacity: .25 } 40% { opacity: 1 } }
+
+  footer {
+    flex: 0 0 auto; padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+    background: var(--panel); border-top: 1px solid var(--line);
+    display: flex; align-items: flex-end; gap: 6px;
+  }
+  .icon-btn {
+    width: 40px; height: 40px; flex: 0 0 auto; border: 0; border-radius: 12px;
+    background: var(--panel-2); color: var(--text); font-size: 18px;
+    display: grid; place-items: center; cursor: pointer;
+  }
+  .icon-btn:active { background: #2a3040; }
+  .icon-btn.rec { background: #3a1f2a; color: #ff8b8b; animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .55 } }
+  #input {
+    flex: 1; min-height: 40px; max-height: 120px; resize: none;
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 12px; padding: 10px 12px; font-size: 15px; line-height: 1.4;
+    outline: none; font-family: inherit;
+  }
+  #input:focus { border-color: #3a4152; }
+  #send { width: 44px; height: 40px; border: 0; border-radius: 12px; background: linear-gradient(135deg, var(--accent), #5b8cff); color: white; font-size: 16px; cursor: pointer; }
+  #send:disabled { opacity: .4; }
+  #preview { display: none; padding: 6px 12px 0; background: var(--panel); }
+  #preview img { height: 56px; border-radius: 8px; }
+  #preview .x { color: var(--muted); margin-left: 8px; cursor: pointer; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="avatar">🐳</div>
+  <div>
+    <div class="name">TideCove</div>
+    <div class="sub" id="sub">连接中…</div>
+  </div>
+  <div class="dot wait" id="dot"></div>
+</header>
+
+<div id="login">
+  <div class="card">
+    <h1>绑定这台手机</h1>
+    <p>在电脑上打开「星汐聊天」的控制台，把显示的 6 位配对码填进来。<br>每台服务器只能绑定一台手机。</p>
+    <input class="code-input" id="code" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code">
+    <button class="btn" id="pairBtn">绑定</button>
+    <div class="hint" id="loginHint"></div>
+  </div>
+</div>
+
+<div id="chat" class="hidden"></div>
+
+<div id="preview"><img id="previewImg" alt=""><span class="x" id="previewX">✕</span></div>
+
+<footer id="bar" class="hidden">
+  <button class="icon-btn" id="imgBtn" title="图片">🖼️</button>
+  <button class="icon-btn" id="micBtn" title="语音">🎤</button>
+  <textarea id="input" rows="1" placeholder="说点什么…"></textarea>
+  <button id="send" disabled>➤</button>
+  <input type="file" id="file" accept="image/*" class="hidden">
+</footer>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const store = {
+  get token() { return localStorage.getItem('xg_token'); },
+  set token(v) { v ? localStorage.setItem('xg_token', v) : localStorage.removeItem('xg_token'); },
+};
+let pendingImage = null;      // 预览用的 objectURL
+let pendingImageBlob = null;  // 实际上传的压缩后二进制
+let busy = false;
+
+const chatEl = $('#chat');
+const inputEl = $('#input');
+const sendBtn = $('#send');
+const subEl = $('#sub');
+const dotEl = $('#dot');
+
+function setStatus(text, cls) {
+  subEl.textContent = text;
+  dotEl.className = 'dot' + (cls ? ' ' + cls : '');
+}
+
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// ── 消息提示：声音 + 震动 + 标题闪烁 + 后台系统通知 ──
+let _audioCtx = null;
+function beep(times = 2) {
+  try {
+    _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (_audioCtx.state === 'suspended') _audioCtx.resume();
+    let t = _audioCtx.currentTime;
+    for (let i = 0; i < times; i++) {
+      const o = _audioCtx.createOscillator();
+      const g = _audioCtx.createGain();
+      o.connect(g); g.connect(_audioCtx.destination);
+      o.type = 'sine';
+      o.frequency.setValueAtTime(880, t);
+      o.frequency.exponentialRampToValueAtTime(1320, t + 0.08);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.22, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+      o.start(t); o.stop(t + 0.24);
+      t += 0.26;
+    }
+  } catch { /* 静音失败不影响消息 */ }
+}
+
+function flashTitle() {
+  if (!document.hidden) return;
+  const base = document.title.replace(/^●\s*/, '');
+  let on = false;
+  const timer = setInterval(() => {
+    if (!document.hidden) { clearInterval(timer); document.title = base; return; }
+    on = !on;
+    document.title = on ? '● ' + base : base;
+  }, 800);
+}
+
+function notifyIncoming(text) {
+  beep(2);
+  try { navigator.vibrate?.([70, 45, 70]); } catch { /* 没权限就算了 */ }
+  flashTitle();
+  if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+    try { new Notification('星汐', { body: String(text).slice(0, 80), tag: 'tidecove', renotify: true }); } catch { /* ignore */ }
+  }
+}
+
+async function askNotifyPermission() {
+  try {
+    if ('Notification' in window && Notification.permission === 'default') {
+      await Notification.requestPermission();
+    }
+  } catch { /* ignore */ }
+}
+
+// ── SSE 推送：服务器可主动发消息 ──
+let _es = null;
+function connectEvents() {
+  if (_es) { try { _es.close(); } catch { /* ignore */ } }
+  if (!store.token) return;
+  try {
+    _es = new EventSource(`/api/events?token=${encodeURIComponent(store.token)}`);
+    _es.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'message') {
+          renderMessage('ai', msg.text, { images: msg.images, audio: msg.audio, ts: msg.ts || Date.now() });
+        }
+      } catch { /* 坏帧忽略 */ }
+    };
+    // EventSource 自带重连，不用手写
+    _es.onerror = () => { /* 等它自己重连 */ };
+  } catch { /* 不支持就算了 */ }
+}
+
+function renderMessage(role, text, extra = {}) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + (role === 'user' ? 'me' : 'ai');
+  const b = document.createElement('div');
+  b.className = 'bubble';
+  let html = esc(text);
+  if (extra.images?.length) {
+    html += extra.images.map((u) => {
+      const spin = extra.uploading
+        ? '<span class="uploading"><span class="spin"></span></span>'
+        : '';
+      return `<span class="imgwrap">${spin}<img src="${esc(u)}" alt=""></span>`;
+    }).join('');
+  }
+  if (extra.audio) html += `<audio controls src="${esc(extra.audio)}"></audio>`;
+  b.innerHTML = html;
+  div.appendChild(b);
+  if (extra.ts) {
+    const m = document.createElement('div');
+    m.className = 'meta';
+    m.textContent = new Date(extra.ts).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    div.appendChild(m);
+  }
+  chatEl.appendChild(div);
+  chatEl.scrollTop = chatEl.scrollHeight;
+  return div;
+}
+
+function typingBubble() {
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.id = 'typing';
+  div.innerHTML = '<div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div>';
+  chatEl.appendChild(div);
+  chatEl.scrollTop = chatEl.scrollHeight;
+  return div;
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+// ── 启动 ──
+async function boot() {
+  setStatus('连接中…', 'wait');
+  try {
+    const st = await api('/api/status');
+    if (!st.paired) {
+      $('#login').classList.remove('hidden');
+      $('#chat').classList.add('hidden');
+      $('#bar').classList.add('hidden');
+      setStatus('等待配对', 'wait');
+      $('#loginHint').textContent = st.pairCode ? '控制台配对码已就绪（10 分钟内有效）' : '在电脑上查看配对码';
+      return;
+    }
+    if (!store.token) {
+      // 服务端已绑定，但这台手机没有 token
+      $('#login').classList.remove('hidden');
+      $('#loginHint').textContent = '这台手机没有绑定凭证，需要电脑端重置后重新配对';
+      $('#loginHint').className = 'hint err';
+      return;
+    }
+    enterChat(st);
+  } catch (e) {
+    setStatus('连不上服务器', 'off');
+    $('#loginHint').textContent = '连接失败：' + e.message;
+  }
+}
+
+function enterChat(st) {
+  askNotifyPermission();
+  connectEvents();
+  $('#login').classList.add('hidden');
+  $('#chat').classList.remove('hidden');
+  $('#bar').classList.remove('hidden');
+  setStatus(st.dshReady ? (st.streamReady ? '在线' : 'AI 连接中…') : 'AI 未就绪', st.dshReady && st.streamReady ? '' : 'wait');
+  loadHistory();
+  if (!st.dshReady || !st.streamReady) setTimeout(pollStatus, 3000);
+}
+
+async function pollStatus() {
+  try {
+    const st = await api('/api/status');
+    if (st.dshReady && st.streamReady) setStatus('在线', '');
+    else setStatus(st.dshReady ? 'AI 连接中…' : 'AI 未就绪', 'wait');
+    if (!st.dshReady || !st.streamReady) setTimeout(pollStatus, 4000);
+  } catch { setTimeout(pollStatus, 6000); }
+}
+
+async function loadHistory() {
+  try {
+    const { items } = await api('/api/history?token=' + encodeURIComponent(store.token));
+    chatEl.innerHTML = '';
+    for (const it of items) {
+      const showText = (it.text === '[图片]' && it.images?.length) ? '' : it.text;
+      renderMessage(it.role === 'user' ? 'user' : 'ai', showText, it);
+    }
+  } catch {}
+}
+
+// ── 配对 ──
+$('#pairBtn').onclick = async () => {
+  const code = $('#code').value.trim();
+  if (code.length !== 6) { $('#loginHint').textContent = '配对码是 6 位数字'; $('#loginHint').className = 'hint err'; return; }
+  $('#pairBtn').disabled = true;
+  try {
+    const r = await api('/api/pair', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, name: /Android/.test(navigator.userAgent) ? 'Android 手机' : '手机' }),
+    });
+    store.token = r.token;
+    const st = await api('/api/status');
+    enterChat(st);
+  } catch (e) {
+    $('#loginHint').textContent = e.message;
+    $('#loginHint').className = 'hint err';
+  } finally { $('#pairBtn').disabled = false; }
+};
+
+// ── 发送 ──
+function autosize() {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+}
+inputEl.addEventListener('input', () => { autosize(); sendBtn.disabled = !inputEl.value.trim() && !pendingImage; });
+inputEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+});
+
+sendBtn.onclick = send;
+
+async function send() {
+  // 借这次点击解锁音频上下文（WebView 的 autoplay 策略）
+  try {
+    _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (_audioCtx.state === 'suspended') _audioCtx.resume();
+    _audioCtx.resume();
+  } catch { /* ignore */ }
+  if (busy) return;
+  const text = inputEl.value.trim();
+  const blob = pendingImageBlob;
+  const localUrl = pendingImage;
+  if (!text && !blob) return;
+  busy = true;
+  sendBtn.disabled = true;
+
+  // ① 先把消息和图片放上屏（本地图 + 转圈），不等上传
+  const msgEl = renderMessage('user', text, {
+    images: localUrl ? [localUrl] : [],
+    uploading: Boolean(blob),
+    ts: Date.now(),
+  });
+  inputEl.value = ''; autosize();
+  pendingImage = null; pendingImageBlob = null;
+  $('#preview').style.display = 'none';
+
+  // ② 后台上传，传完把转圈去掉
+  const images = [];
+  if (blob) {
+    setStatus('上传中…', 'wait');
+    try {
+      const up = await uploadBlob(blob);
+      images.push(up.url);
+      msgEl.querySelectorAll('.uploading').forEach((el) => el.remove());
+      setStatus('在线', '');
+    } catch (e) {
+      msgEl.querySelectorAll('.uploading').forEach((el) => el.remove());
+      msgEl.querySelectorAll('.imgwrap').forEach((el) => el.classList.add('failed'));
+      renderMessage('ai', '图片上传失败：' + e.message);
+      busy = false;
+      sendBtn.disabled = !inputEl.value.trim();
+      setStatus('出错', 'off');
+      return;
+    }
+  }
+
+  // ③ 再交给 AI
+  const t = typingBubble();
+  try {
+    const r = await api('/api/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: store.token,
+        text: text || (images.length ? '[图片]' : ''),
+        images,
+      }),
+    });
+    t.remove();
+    renderMessage('ai', r.reply, { images: r.images, audio: r.audio, ts: Date.now() });
+    setStatus('在线', '');
+  } catch (e) {
+    t.remove();
+    renderMessage('ai', '⚠️ ' + e.message);
+    setStatus('出错', 'off');
+  } finally {
+    busy = false;
+    sendBtn.disabled = !inputEl.value.trim() && !pendingImage;
+  }
+}
+
+// ── 图片：压缩后二进制直传（不再 base64）──
+$('#imgBtn').onclick = () => $('#file').click();
+
+/** 把图缩到最长边 maxSide，输出 JPEG，体积通常只剩 10~25% */
+function compressImage(file, maxSide = 1600, quality = 0.82) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        let w = img.naturalWidth, h = img.naturalHeight;
+        const scale = Math.min(1, maxSide / Math.max(w, h));
+        w = Math.max(1, Math.round(w * scale));
+        h = Math.max(1, Math.round(h * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob((blob) => {
+          URL.revokeObjectURL(url);
+          resolve(blob || file);
+        }, 'image/jpeg', quality);
+      } catch {
+        URL.revokeObjectURL(url);
+        resolve(file);
+      }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
+/** 二进制上传：Content-Type 用图片类型，token 走 header */
+async function uploadBlob(blob) {
+  const res = await fetch('/api/upload', {
+    method: 'POST',
+    headers: { 'Content-Type': blob.type || 'image/jpeg', 'X-Token': store.token },
+    body: blob,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+$('#file').onchange = async (e) => {
+  const f = e.target.files?.[0];
+  if (!f) return;
+  e.target.value = '';
+  setStatus('处理图片…', 'wait');
+  try {
+    const blob = await compressImage(f, 1600, 0.82);
+    pendingImageBlob = blob;
+    if (pendingImage) URL.revokeObjectURL(pendingImage);
+    pendingImage = URL.createObjectURL(blob);
+    $('#previewImg').src = pendingImage;
+    $('#preview').style.display = 'block';
+    sendBtn.disabled = false;
+    setStatus('图片已压缩 ' + Math.max(1, Math.round(blob.size / 1024)) + 'KB', '');
+  } catch {
+    renderMessage('ai', '图片处理失败，换一张试试');
+    setStatus('在线', '');
+  }
+};
+
+$('#previewX').onclick = () => {
+  if (pendingImage) URL.revokeObjectURL(pendingImage);
+  pendingImage = null;
+  pendingImageBlob = null;
+  $('#preview').style.display = 'none';
+  sendBtn.disabled = !inputEl.value.trim();
+};
+
+// ── 语音（浏览器语音识别；不支持就提示）──
+let recog = null;
+let recording = false;
+const micBtn = $('#micBtn');
+micBtn.onclick = () => {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { renderMessage('ai', '这台手机的浏览器不支持语音识别，改用打字吧。'); return; }
+  if (recording) { recog?.stop(); return; }
+  recog = new SR();
+  recog.lang = 'zh-CN';
+  recog.interimResults = true;
+  recog.continuous = false;
+  const base = inputEl.value;
+  recog.onstart = () => { recording = true; micBtn.classList.add('rec'); micBtn.textContent = '⏹'; };
+  recog.onresult = (ev) => {
+    let txt = '';
+    for (let i = 0; i < ev.results.length; i++) txt += ev.results[i][0].transcript;
+    inputEl.value = (base ? base + ' ' : '') + txt;
+    autosize();
+    sendBtn.disabled = !inputEl.value.trim() && !pendingImage;
+  };
+  recog.onerror = (e) => { renderMessage('ai', '语音识别失败：' + (e.error || 'unknown')); };
+  recog.onend = () => { recording = false; micBtn.classList.remove('rec'); micBtn.textContent = '🎤'; };
+  recog.start();
+};
+
+boot();
+setInterval(() => { if (!$('#chat').classList.contains('hidden')) bootSilently(); }, 20000);
+async function bootSilently() {
+  try {
+    const st = await api('/api/status');
+    if (st.paired && store.token) setStatus(st.dshReady && st.streamReady ? '在线' : 'AI 连接中…', st.dshReady && st.streamReady ? '' : 'wait');
+  } catch {}
+}
+
+// ── PWA：注册 Service Worker + 安装引导 ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  installPrompt = e;
+  showInstallHint();
+});
+function showInstallHint() {
+  if (document.getElementById('installBar')) return;
+  const bar = document.createElement('div');
+  bar.id = 'installBar';
+  bar.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));background:#1e222b;border:1px solid #2a3040;border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:center;z-index:50;font-size:13px;color:#c9d1e0;';
+  bar.innerHTML = '<span style="flex:1">把 TideCove 装到桌面，用起来就像 App</span><button id="installYes" style="border:0;border-radius:10px;padding:8px 14px;background:linear-gradient(135deg,#7c5cff,#5b8cff);color:#fff;font-weight:600">安装</button><span id="installNo" style="color:#8b93a3;padding:4px">✕</span>';
+  document.body.appendChild(bar);
+  document.getElementById('installYes').onclick = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    await installPrompt.userChoice;
+    installPrompt = null;
+    bar.remove();
+  };
+  document.getElementById('installNo').onclick = () => bar.remove();
+}
+
+</script>
+</body>
+</html>

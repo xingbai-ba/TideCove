@@ -1,5 +1,5 @@
 // TideCove Service Worker —— 让 PWA 可安装 + 断网时还能打开壳
-const CACHE = 'tidecove-v125';
+const CACHE = 'tidecove-v127';
 const SHELL = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (e) => {

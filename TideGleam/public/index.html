@@ -577,7 +577,7 @@
       <div class="themes" id="themes"></div>
     </div>
 
-    <div class="set-ver">TideCove 1.2.5</div>
+    <div class="set-ver">TideCove 1.2.7</div>
   </div>
 </div>
 
@@ -1057,7 +1057,7 @@ function enterChat(st) {
   $('#login').classList.add('hidden');
   $('#chat').classList.remove('hidden');
   $('#bar').classList.remove('hidden');
-  setStatus(st.dshReady ? (st.streamReady ? '在线' : 'AI 连接中…') : 'AI 未就绪', st.dshReady && st.streamReady ? '' : 'wait');
+  setStatus('在线', '');
   loadHistory();
   pullSettings();
   if (window.__pullStickers) window.__pullStickers();
@@ -1066,11 +1066,9 @@ function enterChat(st) {
 
 async function pollStatus() {
   try {
-    const st = await api('/api/status');
-    if (st.dshReady && st.streamReady) setStatus('在线', '');
-    else setStatus(st.dshReady ? 'AI 连接中…' : 'AI 未就绪', 'wait');
-    if (!st.dshReady || !st.streamReady) setTimeout(pollStatus, 4000);
-  } catch { setTimeout(pollStatus, 6000); }
+    await api('/api/status');
+    setStatus('在线', '');
+  } catch { setStatus('连不上服务器', 'off'); setTimeout(pollStatus, 6000); }
 }
 
 let historyHasMore = true;
@@ -1228,19 +1226,16 @@ async function send() {
   // ② 后台上传，传完把转圈去掉（这段时间屏幕上是安静的——真人也不会秒回）
   const images = [];
   if (blob) {
-    setStatus('上传中…', 'wait');
     try {
       const up = await uploadBlob(blob);
       images.push(up.url);
       msgEl.querySelectorAll('.uploading').forEach((el) => el.remove());
-      setStatus('在线', '');
     } catch (e) {
       msgEl.querySelectorAll('.uploading').forEach((el) => el.remove());
       msgEl.querySelectorAll('.imgwrap').forEach((el) => el.classList.add('failed'));
       renderMessage('ai', '图片上传失败：' + e.message);
       busy = false;
       sendBtn.disabled = !inputEl.value.trim();
-      setStatus('出错', 'off');
       return;
     }
   }
@@ -1254,7 +1249,6 @@ async function send() {
 
   busy = false;
   sendBtn.disabled = !inputEl.value.trim() && !pendingImage;
-  setStatus('待发送…', 'wait');
 }
 
 // 安静 10 秒后：把攒下的几条合并成一次请求
@@ -1266,7 +1260,6 @@ async function flushSendBatch() {
   pendingImages = [];
   sendBatchTimer = null;
 
-  setStatus('连接中…', 'wait');
   const t = typingBubble();
   try {
     const r = await api('/api/chat', {
@@ -1278,11 +1271,9 @@ async function flushSendBatch() {
     await new Promise((res) => setTimeout(res, thinkMs));
     // 注意：不能 t.remove()，renderSegments 要靠它原地变身
     renderSegments('ai', r.reply, { images: r.images, audio: r.audio, ts: Date.now() }, t);
-    setStatus('在线', '');
   } catch (e) {
     t.remove();
     renderMessage('ai', '⚠️ ' + e.message);
-    setStatus('出错', 'off');
   }
 }
 
@@ -1334,7 +1325,6 @@ $('#file').onchange = async (e) => {
   const f = e.target.files?.[0];
   if (!f) return;
   e.target.value = '';
-  setStatus('处理图片…', 'wait');
   try {
     const blob = await compressImage(f, 1600, 0.82);
     pendingImageBlob = blob;
@@ -1343,10 +1333,8 @@ $('#file').onchange = async (e) => {
     $('#previewImg').src = pendingImage;
     $('#preview').style.display = 'block';
     sendBtn.disabled = false;
-    setStatus('图片已压缩 ' + Math.max(1, Math.round(blob.size / 1024)) + 'KB', '');
   } catch {
     renderMessage('ai', '图片处理失败，换一张试试');
-    setStatus('在线', '');
   }
 };
 
@@ -1391,7 +1379,7 @@ setInterval(() => { if (!$('#chat').classList.contains('hidden')) bootSilently()
 async function bootSilently() {
   try {
     const st = await api('/api/status');
-    if (st.paired && store.token) setStatus(st.dshReady && st.streamReady ? '在线' : 'AI 连接中…', st.dshReady && st.streamReady ? '' : 'wait');
+    if (st.paired && store.token) setStatus('在线', '');
   } catch {}
 }
 
@@ -1463,7 +1451,10 @@ const COLORS = ['#6d4dfa', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#ec4899'
     }
 
     if (view && file) {
-      view.onclick = () => file.click();
+      view.onclick = () => {
+        beginAvatarPick(o.key, paint);
+        file.click();
+      };
       file.onchange = () => {
         const f = file.files && file.files[0];
         if (!f) return;
@@ -2125,10 +2116,29 @@ function compressToDataUrl(file, maxSide) {
 })();
 
 // ── 原生选图回调（Android 侧读 Uri 后注入 dataURL，绕过 input 的 change）──
-let pickMode = 'image';
+let pickMode = 'image';       // 'image' | 'sticker' | 'avatar'
+let avatarPickKey = null;     // 'me' | 'ai'
+let avatarPickCb = null;
+
+/** 换头像前调用：告诉原生回调这次选图是给头像用的 */
+function beginAvatarPick(key, cb) {
+  pickMode = 'avatar';
+  avatarPickKey = key;
+  avatarPickCb = cb || null;
+}
 
 window.__onNativePick = async function (dataUrl) {
   try {
+    // 换头像：直接进裁剪界面，不能当图片发出去
+    if (pickMode === 'avatar') {
+      const key = avatarPickKey || 'me';
+      const cb = avatarPickCb;
+      pickMode = 'image';
+      avatarPickKey = null;
+      avatarPickCb = null;
+      openAvatarCrop(dataUrl, key, cb);
+      return;
+    }
     const blob = dataUrlToBlob(dataUrl);
     if (pickMode === 'sticker') {
       const grid = document.getElementById('stickerGrid');
@@ -2192,12 +2202,15 @@ window.__onNativePick = async function (dataUrl) {
   const avBtn = document.getElementById('ppAvatarBtn');
   const avFile = document.getElementById('ppAvatarFile');
   if (avBtn && avFile) {
-    avBtn.onclick = () => avFile.click();
+    avBtn.onclick = () => {
+      beginAvatarPick('me', paintProfile);
+      avFile.click();
+    };
     avFile.onchange = () => {
       const f = avFile.files && avFile.files[0];
       if (!f) return;
       const r = new FileReader();
-      r.onload = () => openAvatarCrop(r.result, 'me', paintProfile);
+      r.onload = () => openAvatarCrop(r.result, 'me', paintProfile, avFile);
       r.readAsDataURL(f);
       avFile.value = '';
     };

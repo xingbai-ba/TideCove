@@ -10,19 +10,25 @@
 <link rel="manifest" href="/manifest.json">
 <style>
   :root {
-    --bg: #0f1115;
-    --panel: #171a21;
-    --panel-2: #1e222b;
-    --line: #262b36;
+    --bg: #1b1230;
+    --panel: #241a3d;
+    --panel-2: #2c2148;
+    --line: #3a2e55;
     --text: #e8ecf3;
-    --muted: #8b93a3;
+    --muted: #9a90b5;
     --accent: #7c5cff;
     --accent-2: #a78bfa;
     --accent-rgb: 124, 92, 255;
     --accent-2-rgb: 167, 139, 250;
     --bubble-me: #6d4dfa;
     --bubble-ai: #1f2430;
+    --edge: #4a3a73;
     --danger: #ff6b6b;
+  }
+  /* 日夜切换时颜色平滑过渡，别硬切 */
+  body, header, footer, #profilePage, .pp-body, #chat, #input, #preview,
+  .diary-item, .pp-compose, .modal-card, .set-row, .pp-row input, .pp-avatar-btn {
+    transition: background-color .38s ease, color .38s ease, border-color .38s ease;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; margin: 0; }
@@ -35,6 +41,7 @@
   header {
     flex: 0 0 auto; padding: 14px 16px 10px;
     background: linear-gradient(180deg, rgba(var(--accent-rgb), .10), transparent);
+    border-bottom: 1px solid var(--edge);
     display: flex; align-items: center; gap: 10px;
     padding-top: calc(14px + env(safe-area-inset-top));
   }
@@ -83,6 +90,13 @@
     color: var(--text); font-size: 14px; box-sizing: border-box;
   }
   .pp-row input[type=range] { width: 100%; }
+  .seg { display: flex; gap: 8px; }
+  .seg button {
+    flex: 1; padding: 9px 0; border-radius: 10px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--muted);
+    font-size: 13px; font-family: inherit;
+  }
+  .seg button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
   .pp-avatar-btn {
     display: inline-block; padding: 7px 14px; border-radius: 10px;
     border: 1px dashed var(--line); color: var(--muted); font-size: 13px; cursor: pointer;
@@ -108,9 +122,27 @@
   .pp-diary-date { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
   .diary-day { font-size: 12px; color: var(--accent); font-weight: 600; margin-bottom: 8px; }
   .diary-text {
+    position: relative; padding-right: 58px;
     font-size: 14px; line-height: 1.75;
     white-space: pre-wrap; word-break: break-word;
   }
+  .diary-text.editing { padding-right: 0; }
+  .dact { position: absolute; right: 0; top: 0; display: flex; gap: 10px; }
+  .dbtn {
+    background: none; border: 0; padding: 3px; cursor: pointer; line-height: 0;
+    color: var(--muted); font-size: 12px; font-family: inherit;
+    display: flex; align-items: center;
+  }
+  .dbtn svg { display: block; }
+  .dbtn:active { color: var(--accent); }
+  .dbtn.primary { color: var(--accent); font-weight: 600; line-height: 1.4; }
+  .dedit {
+    width: 100%; box-sizing: border-box; resize: vertical; min-height: 70px;
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--accent); border-radius: 8px;
+    padding: 8px 10px; font-size: 14px; font-family: inherit; outline: none;
+  }
+  .dedit-btns { display: flex; gap: 12px; justify-content: flex-end; margin-top: 6px; }
   .diary-who {
     display: inline-block; font-size: 11px; line-height: 1.5;
     padding: 1px 8px; border-radius: 999px; margin-right: 6px;
@@ -357,24 +389,38 @@
 
   .msg.me .bubble.grow { transform-origin: right top; }
   .voice {
-    display: flex; align-items: center; gap: 8px;
-    margin-top: 6px; padding: 8px 12px; border-radius: 12px;
-    background: rgba(255,255,255,.07); cursor: pointer; user-select: none;
-    min-width: 150px;
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 2px; padding: 0;
+    background: none; border: 0; cursor: pointer; user-select: none;
+    min-width: 96px;
   }
+  .vtext { margin-bottom: 6px; white-space: pre-wrap; word-break: break-word; }
   .vplay {
-    width: 26px; height: 26px; border-radius: 50%; flex: 0 0 26px;
+    width: 18px; height: 18px; border-radius: 50%; flex: 0 0 18px;
     background: var(--accent); color: #fff;
     display: flex; align-items: center; justify-content: center;
   }
+  .vplay svg { width: 11px; height: 11px; }
   .vplay.playing { background: var(--accent-2, var(--accent)); }
-  .vbar { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,.18); overflow: hidden; }
+  .vbar { flex: 1; height: 2px; border-radius: 2px; background: rgba(255,255,255,.22); overflow: hidden; min-width: 40px; }
   .vbar i { display: block; height: 100%; width: 0%; background: var(--accent); transition: width .1s linear; }
-  .vdur { font-size: 12px; color: var(--muted); min-width: 34px; text-align: right; }
+  .vdur { font-size: 11px; color: rgba(255,255,255,.7); min-width: 26px; text-align: right; }
+  .vmenu {
+    position: fixed; z-index: 260;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.45); overflow: hidden;
+  }
+  .vmenu button {
+    display: block; width: 100%; padding: 9px 16px; border: 0; background: none;
+    color: var(--text); font-size: 13px; font-family: inherit; cursor: pointer; white-space: nowrap;
+  }
+  .vmenu button:active { background: rgba(var(--accent-rgb), .16); }
   .msg.me { justify-content: flex-end; }
   .bubble {
     max-width: 82%; padding: 10px 13px; border-radius: 16px;
     font-size: 15px; line-height: 1.55; word-break: break-word; white-space: pre-wrap;
+    /* 气泡底色是深色/彩色，文字固定白色，日间模式下才不会变成深字看不清 */
+    color: #fff;
   }
   .msg.me .bubble { background: var(--bubble-me); border-bottom-right-radius: 5px; }
   .msg.ai .bubble { background: var(--bubble-ai); border: 1px solid var(--line); border-bottom-left-radius: 5px; }
@@ -421,7 +467,7 @@
 
   footer {
     flex: 0 0 auto; padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
-    background: var(--panel); border-top: 1px solid var(--line);
+    background: var(--panel); border-top: 1px solid var(--edge);
     display: flex; flex-direction: column; gap: 6px;
   }
   .bar-top { display: flex; gap: 6px; }
@@ -442,7 +488,20 @@
   }
   #input:focus { border-color: var(--accent); }
   #send { width: 44px; height: 40px; border: 0; border-radius: 12px; background: linear-gradient(135deg, var(--bubble-me), var(--accent-2)); color: white; font-size: 16px; cursor: pointer; }
-  #send:disabled { opacity: .4; }
+  #send.off { opacity: .4; }
+  /* 语音输入：按住说话 + 实时声纹 */
+  #voicePad {
+    flex: 1; min-height: 40px; display: flex; align-items: center; justify-content: center;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px;
+    user-select: none; -webkit-user-select: none; cursor: pointer;
+    transition: background-color .2s, border-color .2s;
+  }
+  #voicePad.rec { border-color: var(--accent); background: rgba(var(--accent-rgb), .14); }
+  #voicePad .vhint { color: var(--muted); font-size: 15px; }
+  #voicePad.rec .vhint { color: var(--accent); font-weight: 600; }
+  #vwaves { display: none; }
+  #voicePad.rec #vwaves { display: block; }
+  #voicePad.rec .vhint { display: none; }
   #preview { display: none; padding: 6px 12px 0; background: var(--panel); }
   #preview img { height: 56px; border-radius: 8px; }
   #preview .x { color: var(--muted); margin-left: 8px; cursor: pointer; }
@@ -469,7 +528,7 @@
 <div id="login">
   <div class="card">
     <h1>绑定这台手机</h1>
-    <p>在电脑上打开「星汐聊天」的控制台，把显示的 6 位配对码填进来。<br>每台服务器只能绑定一台手机。</p>
+    <p>在电脑上打开 TideCove 的控制台，把显示的 6 位配对码填进来。<br>每台服务器只能绑定一台手机。</p>
     <input class="code-input" id="code" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code">
     <button class="btn" id="pairBtn">绑定</button>
     <div class="hint" id="loginHint"></div>
@@ -488,7 +547,11 @@
   </div>
   <div class="bar-bottom">
     <textarea id="input" rows="1" placeholder="说点什么…"></textarea>
-    <button id="send" disabled>➤</button>
+    <div id="voicePad" class="hidden">
+      <canvas id="vwaves" width="150" height="24"></canvas>
+      <span class="vhint" id="vhint">按住说话</span>
+    </div>
+    <button id="send" class="off">➤</button>
   </div>
   <input type="file" id="file" accept="image/*" class="hidden">
 </footer>
@@ -526,12 +589,27 @@
         <input type="range" id="ppSize" min="13" max="21" step="1">
       </div>
       <div class="pp-row">
+        <label>外观</label>
+        <div class="seg" id="ppScheme">
+          <button data-scheme="dark">夜间</button>
+          <button data-scheme="light">日间</button>
+        </div>
+      </div>
+      <div class="pp-row">
         <label>主题配色（全局）</label>
         <div class="themes" id="ppThemes"></div>
       </div>
       <div class="pp-row">
         <label>我的气泡颜色</label>
         <div class="colors" id="ppColors"></div>
+      </div>
+      <div class="pp-row">
+        <label>聊天背景</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button id="setBgBtn" class="pp-avatar-btn">选图片</button>
+          <button id="clearBgBtn" class="pp-avatar-btn">恢复默认</button>
+        </div>
+        <input type="file" id="setBgFile" accept="image/*" style="position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;">
       </div>
     </div>
     <div class="pp-page" id="pp-diary" hidden>
@@ -577,7 +655,7 @@
       <div class="themes" id="themes"></div>
     </div>
 
-    <div class="set-ver">TideCove 1.2.7</div>
+    <div class="set-ver">TideCove 1.2.35</div>
   </div>
 </div>
 
@@ -670,7 +748,7 @@ function notifyIncoming(text) {
   try { navigator.vibrate?.([70, 45, 70]); } catch { /* 没权限就算了 */ }
   flashTitle();
   if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-    try { new Notification('星汐', { body: String(text).slice(0, 80), tag: 'tidecove', renotify: true }); } catch { /* ignore */ }
+    try { new Notification((loadSettings().aiNick || '星汐'), { body: String(text).slice(0, 80), tag: 'tidecove', renotify: true }); } catch { /* ignore */ }
   }
 }
 
@@ -739,10 +817,11 @@ function fillBubble(el, text, extra = {}) {
     html += extra.images.map((u) => `<span class="imgwrap"><img src="${esc(u)}" alt=""></span>`).join('');
   }
   if (extra.audio) {
-    html += '<div class="voice" data-src="' + esc(extra.audio) + '">'
-      + '<span class="vplay"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>'
+    const dur = Math.max(0, Math.round(Number(extra.duration || 0)));
+    html += '<div class="voice" data-src="' + esc(extra.audio) + '" data-dur="' + dur + '" data-transcript="' + esc(extra.transcript || '') + '">'
+      + '<span class="vplay"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>'
       + '<span class="vbar"><i></i></span>'
-      + '<span class="vdur">语音</span>'
+      + '<span class="vdur">' + (dur > 0 ? dur + '"' : '…') + '</span>'
       + '</div>';
   }
   b.innerHTML = html;
@@ -751,7 +830,35 @@ function fillBubble(el, text, extra = {}) {
   scrollBottom();
 }
 
-// 分段渲染：每一句都先挂一个「输入中」气泡，等够打字时间（0.5 秒/字）再原地变成内容
+// ── 后台不打断的计时：基于绝对时间，切回前台立刻补齐 ──
+// 手机 WebView 一切后台就会冻结 setTimeout，所以不能用相对延时等。
+function waitUntil(ts) {
+  return new Promise((resolve) => {
+    let timer = null;
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      if (timer) { clearTimeout(timer); timer = null; }
+      document.removeEventListener('visibilitychange', onVis);
+      resolve();
+    };
+    const check = () => { if (Date.now() >= ts) finish(); };
+    const onVis = () => { if (document.visibilityState === 'visible') check(); };
+    const loop = () => {
+      check();
+      if (done) return;
+      const left = ts - Date.now();
+      if (left <= 0) return finish();
+      timer = setTimeout(loop, Math.min(250, Math.max(50, left)));
+    };
+    document.addEventListener('visibilitychange', onVis);
+    loop();
+  });
+}
+
+// 分段渲染：每一句都先挂一个「输入中」气泡，等够打字时间（0.3 秒/字）再原地变成内容
+// 全部按绝对时间排程：切后台再回来，已经该出现的会立刻补出来，不用重新等
 // firstEl：第一条复用 send 里那个已在显示的输入中气泡
 function renderSegments(role, text, extra = {}, firstEl = null) {
   const parts = splitSentences(text);
@@ -759,18 +866,64 @@ function renderSegments(role, text, extra = {}, firstEl = null) {
     if (firstEl) firstEl.remove();
     return;
   }
-  let delay = 0;
-  parts.forEach((seg, i) => {
+
+  const startAt = Date.now();
+  let acc = 0;
+  const tasks = parts.map((seg, i) => {
     const isLast = i === parts.length - 1;
-    const typingCost = seg.length * 500; // 0.5 秒一个字
-    setTimeout(() => {
-      const el = (i === 0 && firstEl) ? firstEl : typingBubble();
-      setTimeout(() => {
-        fillBubble(el, seg, isLast ? extra : {});
-      }, typingCost);
-    }, delay);
-    delay += typingCost;
+    const typingCost = seg.length * 300; // 0.3 秒一个字
+    const task = {
+      seg,
+      isLast,
+      first: i === 0,
+      showAt: startAt + acc,              // 气泡出现的时刻
+      fillAt: startAt + acc + typingCost, // 内容填进去的时刻
+      el: null,
+      filled: false,
+    };
+    acc += typingCost;
+    return task;
   });
+
+  let tickTimer = null;
+  let running = true;
+
+  function cleanup() {
+    running = false;
+    if (tickTimer) { clearTimeout(tickTimer); tickTimer = null; }
+    document.removeEventListener('visibilitychange', onVis);
+  }
+
+  function tick() {
+    if (!running) return;
+    const now = Date.now();
+    let pending = false;
+    for (const t of tasks) {
+      if (!t.el && now >= t.showAt) {
+        t.el = (t.first && firstEl) ? firstEl : typingBubble();
+      }
+      if (t.el && !t.filled && now >= t.fillAt) {
+        fillBubble(t.el, t.seg, t.isLast ? extra : {});
+        t.filled = true;
+      }
+      if (!t.filled) pending = true;
+    }
+    if (!pending) { cleanup(); return; }
+    tickTimer = setTimeout(tick, 120);
+  }
+
+  // 切回前台时立刻推进一次——后台被冻结时全靠这一下把落后的补出来
+  const onVis = () => {
+    if (document.visibilityState === 'visible') {
+      const wasRunning = running;
+      running = true;
+      tick();
+      if (!wasRunning && tickTimer) { /* tick 里已重排 */ }
+    }
+  };
+
+  document.addEventListener('visibilitychange', onVis);
+  tick();
 }
 
 // ── 设置存储 ──
@@ -800,12 +953,16 @@ function postSettings(s, useBeacon) {
       return;
     } catch { /* 退回 fetch */ }
   }
+  // 注意：只有页面要关闭时才用 keepalive —— 它带 64 KiB 的 body 上限，
+  // 头像这种几十上百 KB 的数据用它必然失败，之前就是这样悄悄存不上去的。
   fetch('/api/settings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body,
-    keepalive: true,
-  }).catch(() => {});
+    keepalive: useBeacon === true,
+  }).then((r) => {
+    if (!r.ok) console.warn('设置同步失败 HTTP', r.status);
+  }).catch((e) => console.warn('设置同步失败', e && e.message));
 }
 
 function pushSettings(s) {
@@ -837,6 +994,10 @@ function saveSettings(patch) {
   const s = { ...loadSettings(), ...patch };
   try { localStorage.setItem(SET_KEY, JSON.stringify(s)); } catch { /* 满了就算了 */ }
   pushSettings(s);
+  // 昵称/头像这类会影响已渲染内容的东西，改完立刻重画，不用等重新加载
+  if (('aiNick' in patch) || ('aiAvatar' in patch)) {
+    if (window.__renderDiary) window.__renderDiary();
+  }
   return s;
 }
 
@@ -870,6 +1031,9 @@ function syncSettingsUI() {
   if (aiSizeLbl) aiSizeLbl.textContent = (aiSizeEl && aiSizeEl.value) || 15;
   const nickInput = document.getElementById('ppNickInput');
   if (nickInput) nickInput.value = s.meNick || '';
+  document.querySelectorAll('#ppScheme button').forEach((b) => {
+    b.classList.toggle('on', b.dataset.scheme === (s.scheme === 'light' ? 'light' : 'dark'));
+  });
   document.querySelectorAll('#themes .theme-dot').forEach((d) => {
     d.classList.toggle('on', d.dataset.theme === (s.theme || 'purple'));
   });
@@ -900,9 +1064,30 @@ function hexToRgb(h) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255].join(', ');
 }
 
+  // 外观：夜间暗紫 / 日间白。只换页面底色系，聊天背景图不受影响
+  const SCHEMES = {
+    dark:  { bg: '#1b1230', panel: '#241a3d', panel2: '#2c2148', line: '#3a2e55', text: '#e8ecf3', muted: '#9a90b5', edge: '#4a3a73' },
+    light: { bg: '#ffffff', panel: '#f7f5fc', panel2: '#efedf7', line: '#ddd8ec', text: '#1f1b2e', muted: '#6b647f', edge: '#d0d0d0' },
+  };
+
+  function applyScheme(s) {
+    const root = document.documentElement;
+    const sc = SCHEMES[s.scheme === 'light' ? 'light' : 'dark'];
+    root.style.setProperty('--bg', sc.bg);
+    root.style.setProperty('--panel', sc.panel);
+    root.style.setProperty('--panel-2', sc.panel2);
+    root.style.setProperty('--line', sc.line);
+    root.style.setProperty('--text', sc.text);
+    root.style.setProperty('--muted', sc.muted);
+    root.style.setProperty('--edge', sc.edge);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', sc.bg);
+  }
+
 function applySettings() {
   const s = loadSettings();
   const root = document.documentElement;
+  applyScheme(s);
   const th = THEMES.find((x) => x.id === s.theme) || THEMES[0];
   root.style.setProperty('--accent', th.c1);
   root.style.setProperty('--accent-2', th.c2);
@@ -915,6 +1100,24 @@ function applySettings() {
   if (s.aiSize) root.style.setProperty('--size-ai', s.aiSize + 'px');
   applyHeader();
   paintThemeDots();
+  // 聊天区也要跟着变：背景图 + 已经渲染出来的每条消息头像
+  try { applyBg(); } catch { /* 背景还没初始化完就算了 */ }
+  refreshAvatars();
+}
+
+/** 把聊天区已渲染消息的头像换成当前设置（改头像后不用重进） */
+function refreshAvatars() {
+  const box = document.getElementById('chat');
+  if (!box) return;
+  box.querySelectorAll('.msg').forEach((div) => {
+    const old = div.querySelector('.avatar');
+    if (!old) return;
+    const role = div.classList.contains('me') ? 'user' : 'ai';
+    const tmp = document.createElement('div');
+    tmp.innerHTML = avatarFor(role);
+    const fresh = tmp.firstElementChild;
+    if (fresh) old.replaceWith(fresh);
+  });
 }
 
 /** 主页和设置弹窗里的主题色块，选中态保持一致 */
@@ -953,10 +1156,11 @@ function renderMessage(role, text, extra = {}, animate = true) {
     }).join('');
   }
   if (extra.audio) {
-    html += '<div class="voice" data-src="' + esc(extra.audio) + '">'
-      + '<span class="vplay"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>'
+    const dur = Math.max(0, Math.round(Number(extra.duration || 0)));
+    html += '<div class="voice" data-src="' + esc(extra.audio) + '" data-dur="' + dur + '" data-transcript="' + esc(extra.transcript || '') + '">'
+      + '<span class="vplay"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>'
       + '<span class="vbar"><i></i></span>'
-      + '<span class="vdur">语音</span>'
+      + '<span class="vdur">' + (dur > 0 ? dur + '"' : '…') + '</span>'
       + '</div>';
   }
   b.innerHTML = html;
@@ -967,8 +1171,11 @@ function renderMessage(role, text, extra = {}, animate = true) {
     m.textContent = new Date(extra.ts).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
     div.appendChild(m);
   }
-  chatEl.appendChild(div);
-  scrollBottom();
+  // 批量渲染历史时既不插 DOM 也不滚动：元素先放 fragment，最后一次性挂上去
+  if (!bulkRendering) {
+    chatEl.appendChild(div);
+    scrollBottom();
+  }
   return div;
 }
 
@@ -1061,6 +1268,8 @@ function enterChat(st) {
   loadHistory();
   pullSettings();
   if (window.__pullStickers) window.__pullStickers();
+  // 预加载日记第一页（3 条），点开就是现成的
+  if (window.__loadDiary) window.__loadDiary(true);
   if (!st.dshReady || !st.streamReady) setTimeout(pollStatus, 3000);
 }
 
@@ -1077,7 +1286,7 @@ let loadingMore = false;
 
 function buildMsgEls(it) {
   const frag = document.createDocumentFragment();
-  const showText = (it.text === '[图片]' && it.images?.length) ? '' : it.text;
+  const showText = ((it.text === '[图片]' && it.images?.length) || it.audio) ? '' : it.text;
   const role = it.role === 'user' ? 'user' : 'ai';
   const segs = splitSentences(showText);
   if (!segs.length) {
@@ -1110,16 +1319,32 @@ function scrollToBottomAfterImages() {
   setTimeout(() => scrollBottom(false), 2000);
 }
 
-async function loadHistory() {
+let lastRenderedTs = 0;
+let bulkRendering = false;
+
+/** 把一批消息画进聊天区（清空后重画）。
+ *  关键：整批只做一次 DOM 挂载、只滚一次底，不在循环里反复触碰 DOM。 */
+function renderHistoryItems(items) {
+  bulkRendering = true;
   try {
-    const { items, hasMore } = await api('/api/history?token=' + encodeURIComponent(store.token) + '&limit=60');
     chatEl.innerHTML = '';
-    historyHasMore = Boolean(hasMore);
+    if (!items.length) { lastRenderedTs = 0; return; }
     historyOldestTs = items.length ? items[0].ts : 0;
+    lastRenderedTs = items[items.length - 1].ts || 0;
     const frag = document.createDocumentFragment();
     for (const it of items) frag.appendChild(buildMsgEls(it));
     chatEl.appendChild(frag);
-    scrollToBottomAfterImages(); // 等图片加载完再落底
+  } finally {
+    bulkRendering = false;
+  }
+  scrollToBottomAfterImages(); // 等图片加载完再落底
+}
+
+async function loadHistory() {
+  try {
+    const { items, hasMore } = await api('/api/history?token=' + encodeURIComponent(store.token) + '&limit=60');
+    historyHasMore = Boolean(hasMore);
+    renderHistoryItems(items);
   } catch {}
 }
 
@@ -1181,12 +1406,21 @@ function autosize() {
   inputEl.style.height = 'auto';
   inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
 }
-inputEl.addEventListener('input', () => { autosize(); sendBtn.disabled = !inputEl.value.trim() && !pendingImage; });
+inputEl.addEventListener('input', () => { autosize(); setSendEnabled(!(!inputEl.value.trim() && !pendingImage)); });
 inputEl.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
 });
 
-sendBtn.onclick = send;
+/** 发送键的「灰着」状态用 class 表示，不用 disabled ——
+ *  disabled 会让 Android WebView 把焦点从输入框拿走，键盘跟着收起来 */
+function setSendEnabled(on) {
+  sendBtn.classList.toggle('off', !on);
+}
+
+sendBtn.onclick = () => {
+  if (sendBtn.classList.contains('off')) return;
+  send();
+};
 
 async function send() {
   // 借这次点击解锁音频上下文（WebView 的 autoplay 策略）
@@ -1208,7 +1442,7 @@ async function send() {
   lastSendAt = Date.now();
 
   busy = true;
-  sendBtn.disabled = true;
+  setSendEnabled(false);
 
   // ① 先把消息和图片放上屏（本地图 + 转圈），不等上传
   const isSticker = pendingSticker;
@@ -1235,20 +1469,30 @@ async function send() {
       msgEl.querySelectorAll('.imgwrap').forEach((el) => el.classList.add('failed'));
       renderMessage('ai', '图片上传失败：' + e.message);
       busy = false;
-      sendBtn.disabled = !inputEl.value.trim();
+      setSendEnabled(!(!inputEl.value.trim()));
       return;
     }
   }
 
   // ③ 先不发给 AI：等 10 秒，看主人还会不会接着发
   //    这 10 秒内再有消息就合并成一条，安静满 10 秒才真正发出去
-  pendingTexts.push(text || (images.length ? '[图片]' : ''));
-  pendingImages.push(...images);
+  const batchText = text || (images.length ? '[图片]' : '');
+  // 同一句话在合并窗口里只留一条：点了没反应又点一次的话，不该变成两条一样的
+  if (batchText && !images.length && pendingTexts.includes(batchText)) {
+    // 已经排队过这句，忽略这次重复点击
+  } else {
+    pendingTexts.push(batchText);
+    pendingImages.push(...images);
+  }
   clearTimeout(sendBatchTimer);
   sendBatchTimer = setTimeout(flushSendBatch, 10000);
 
   busy = false;
-  sendBtn.disabled = !inputEl.value.trim() && !pendingImage;
+  // 点一次后按钮歇 1.2 秒，防止「以为没发出去」又点一遍（状态栏不动）
+  setSendEnabled(false);
+  setTimeout(() => {
+    setSendEnabled(!(!inputEl.value.trim() && !pendingImage));
+  }, 1200);
 }
 
 // 安静 10 秒后：把攒下的几条合并成一次请求
@@ -1267,8 +1511,9 @@ async function flushSendBatch() {
       body: JSON.stringify({ token: store.token, text, images }),
     });
     // 拿到回复后再愣 3-10 秒（真人不会秒回）
+    // 用绝对时间等：切后台冻结定时器也不影响，回来立刻补上
     const thinkMs = 3000 + Math.random() * 7000;
-    await new Promise((res) => setTimeout(res, thinkMs));
+    await waitUntil(Date.now() + thinkMs);
     // 注意：不能 t.remove()，renderSegments 要靠它原地变身
     renderSegments('ai', r.reply, { images: r.images, audio: r.audio, ts: Date.now() }, t);
   } catch (e) {
@@ -1332,7 +1577,7 @@ $('#file').onchange = async (e) => {
     pendingImage = URL.createObjectURL(blob);
     $('#previewImg').src = pendingImage;
     $('#preview').style.display = 'block';
-    sendBtn.disabled = false;
+    setSendEnabled(true);
   } catch {
     renderMessage('ai', '图片处理失败，换一张试试');
   }
@@ -1343,36 +1588,413 @@ $('#previewX').onclick = () => {
   pendingImage = null;
   pendingImageBlob = null;
   $('#preview').style.display = 'none';
-  sendBtn.disabled = !inputEl.value.trim();
+  setSendEnabled(!(!inputEl.value.trim()));
 };
 
-// ── 语音（浏览器语音识别；不支持就提示）──
-let recog = null;
-let recording = false;
+// ── 语音输入：点麦克风切到语音框，长按录音（带实时声纹），松手发送 ──
+let voiceMode = false;
+let micRecording = false;
+let usingNative = false;
+let recStartAt = 0;
+let mediaRec = null;
+let recChunks = [];
+let recStream = null;
+let audioCtx = null;
+let analyser = null;
+let waveRaf = 0;
+
 const micBtn = $('#micBtn');
-micBtn.onclick = () => {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { renderMessage('ai', '这台手机的浏览器不支持语音识别，改用打字吧。'); return; }
-  if (recording) { recog?.stop(); return; }
-  recog = new SR();
-  recog.lang = 'zh-CN';
-  recog.interimResults = true;
-  recog.continuous = false;
-  const base = inputEl.value;
-  recog.onstart = () => { recording = true; micBtn.classList.add('rec'); micBtn.innerHTML = STOP_SVG; micBtn.textContent = '⏹'; };
-  recog.onresult = (ev) => {
-    let txt = '';
-    for (let i = 0; i < ev.results.length; i++) txt += ev.results[i][0].transcript;
-    inputEl.value = (base ? base + ' ' : '') + txt;
-    autosize();
-    sendBtn.disabled = !inputEl.value.trim() && !pendingImage;
+const voicePad = $('#voicePad');
+const MIC_SVG = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/></svg>';
+const KB_SVG = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2.5"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>';
+
+function pickAudioMime() {
+  const list = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'];
+  for (const m of list) {
+    try { if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m; } catch { /* ignore */ }
+  }
+  return '';
+}
+
+/** 逐级放宽约束地要麦克风：不少 Android WebView 会在默认的音频预处理上失败（NotReadableError） */
+async function openMic() {
+  const tries = [
+    { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } },
+    { audio: { echoCancellation: false } },
+    { audio: { channelCount: 1 } },
+    { audio: true },
+  ];
+  let lastErr = null;
+  for (const c of tries) {
+    try {
+      return await navigator.mediaDevices.getUserMedia(c);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('拿不到麦克风');
+}
+
+function setVoiceMode(on) {
+  voiceMode = !!on;
+  const inp = $('#input');
+  if (inp) inp.classList.toggle('hidden', voiceMode);
+  if (voicePad) voicePad.classList.toggle('hidden', !voiceMode);
+  if (micBtn) {
+    micBtn.innerHTML = voiceMode ? KB_SVG : MIC_SVG;
+    micBtn.title = voiceMode ? '切换到键盘' : '语音';
+  }
+  if (!voiceMode) {
+    stopVoiceRec(true);
+    // 这里不 focus：切回键盘输入只是换输入框，键盘等用户点输入框再弹
+  }
+}
+if (micBtn) micBtn.onclick = () => setVoiceMode(!voiceMode);
+
+function drawWaves() {
+  const cv = document.getElementById('vwaves');
+  if (!cv || !analyser) return;
+  const c = cv.getContext('2d');
+  const n = analyser.frequencyBinCount;
+  const data = new Uint8Array(n);
+  analyser.getByteFrequencyData(data);
+  c.clearRect(0, 0, cv.width, cv.height);
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#7c5cff';
+  c.fillStyle = accent;
+  const bars = 24;
+  const bw = cv.width / bars;
+  for (let k = 0; k < bars; k++) {
+    const v = data[Math.floor(k * n / bars)] / 255;
+    const h = Math.max(2, v * cv.height);
+    c.fillRect(k * bw + 1, (cv.height - h) / 2, Math.max(2, bw - 2), h);
+  }
+  waveRaf = requestAnimationFrame(drawWaves);
+}
+
+function startAudioGraph(stream) {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const src = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 128;
+    src.connect(analyser);
+    cancelAnimationFrame(waveRaf);
+    drawWaves();
+  } catch { /* 声纹画不出来也不影响录音 */ }
+}
+
+function finishAudioGraph() {
+  cancelAnimationFrame(waveRaf);
+  waveRaf = 0;
+  try { if (recStream) recStream.getTracks().forEach((t) => t.stop()); } catch { /* ignore */ }
+  recStream = null;
+  analyser = null;
+  if (voicePad) voicePad.classList.remove('rec');
+}
+
+/** 原生录音拿不到音频流时，用一段模拟波形至少让人知道在录 */
+function startFakeWave() {
+  const cv = document.getElementById('vwaves');
+  if (!cv) return;
+  const c = cv.getContext('2d');
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#7c5cff';
+  const bars = 24;
+  const bw = cv.width / bars;
+  const t0 = Date.now();
+  const frame = () => {
+    c.clearRect(0, 0, cv.width, cv.height);
+    c.fillStyle = accent;
+    const t = (Date.now() - t0) / 260;
+    for (let i = 0; i < bars; i++) {
+      const v = (Math.sin(t + i * 0.55) * 0.5 + 0.5) * (0.35 + 0.65 * Math.random());
+      const h = Math.max(2, v * cv.height);
+      c.fillRect(i * bw + 1, (cv.height - h) / 2, Math.max(2, bw - 2), h);
+    }
+    waveRaf = requestAnimationFrame(frame);
   };
-  recog.onerror = (e) => { renderMessage('ai', '语音识别失败：' + (e.error || 'unknown')); };
-  const MIC_SVG = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/></svg>';
-const STOP_SVG = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>';
-recog.onend = () => { recording = false; micBtn.classList.remove('rec'); micBtn.innerHTML = MIC_SVG; };
-  recog.start();
-};
+  cancelAnimationFrame(waveRaf);
+  frame();
+}
+
+function hasNativeRec() {
+  try {
+    return !!(window.TideCoveNative && window.TideCoveNative.available && window.TideCoveNative.available());
+  } catch { return false; }
+}
+
+async function startVoiceRec() {
+  if (micRecording) return;
+
+  // ① 优先走 App 原生录音（WebView 的 getUserMedia 在部分机型上拿不到音频源）
+  if (hasNativeRec()) {
+    let r = '';
+    try { r = String(window.TideCoveNative.start() || ''); } catch (e) { r = 'ERR:' + e.message; }
+    if (r === 'OK') {
+      micRecording = true;
+      usingNative = true;
+      recStartAt = Date.now();
+      if (voicePad) voicePad.classList.add('rec');
+      startFakeWave();
+      return;
+    }
+    if (r === 'NEED_PERM') {
+      renderMessage('ai', '需要麦克风权限：在弹窗里点「允许」后，再按一次说话。');
+      return;
+    }
+    renderMessage('ai', '原生录音没起来（' + r + '），改试网页录音…');
+  }
+
+  // ② 回退：WebView 录音
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+    renderMessage('ai', '这台手机的 WebView 不支持录音');
+    return;
+  }
+  try {
+    if (recStream) { try { recStream.getTracks().forEach((t) => t.stop()); } catch { /* ignore */ } recStream = null; }
+    const stream = await openMic();
+    recStream = stream;
+    usingNative = false;
+    recChunks = [];
+    const mime = pickAudioMime();
+    mediaRec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    mediaRec.ondataavailable = (e) => { if (e.data && e.data.size) recChunks.push(e.data); };
+    mediaRec.onstop = async () => {
+      const type = (mediaRec && mediaRec.mimeType) || 'audio/webm';
+      finishAudioGraph();
+      micRecording = false;
+      const blob = new Blob(recChunks, { type });
+      recChunks = [];
+      if (blob.size < 1200) { renderMessage('ai', '太短了，没录到声音'); return; }
+      await sendVoice(blob, recStartAt ? (Date.now() - recStartAt) / 1000 : 0);
+    };
+    mediaRec.start();
+    micRecording = true;
+    recStartAt = Date.now();
+    if (voicePad) voicePad.classList.add('rec');
+    startAudioGraph(stream);
+  } catch (e) {
+    const name = (e && e.name) || '';
+    const detail = [name, e && e.message].filter(Boolean).join(' / ');
+    let tip = '';
+    if (name === 'NotAllowedError') {
+      tip = '去手机「设置 → 应用 → TideCove → 权限」把麦克风打开。';
+    } else if (name === 'NotReadableError') {
+      tip = '麦克风被别的 App 占着，或者被系统的隐私保护冻住了。\n先关掉微信、录音机、语音助手之类的应用再试；还不行就重启一次手机。';
+    } else if (name === 'NotFoundError') {
+      tip = '系统里没找到可用的麦克风设备。';
+    } else if (name === 'SecurityError') {
+      tip = '当前不是 HTTPS 页面，浏览器不允许录音。请用公网 https 地址打开。';
+    }
+    renderMessage('ai', '拿不到麦克风：' + (detail || '未知原因') + (tip ? '\n' + tip : ''));
+  }
+}
+
+function stopVoiceRec(abort) {
+  if (!micRecording) return;
+
+  // 原生录音收尾
+  if (usingNative) {
+    let path = '';
+    try { path = String(window.TideCoveNative.stop() || ''); } catch (e) { path = 'ERR:' + e.message; }
+    micRecording = false;
+    usingNative = false;
+    cancelAnimationFrame(waveRaf);
+    waveRaf = 0;
+    if (voicePad) voicePad.classList.remove('rec');
+    if (abort) return;
+    if (path.indexOf('ERR:') === 0) { renderMessage('ai', '录音失败：' + path); return; }
+    let b64 = '';
+    try { b64 = String(window.TideCoveNative.readBase64(path) || ''); } catch (e) { b64 = 'ERR:' + e.message; }
+    if (b64.indexOf('ERR:') === 0) { renderMessage('ai', '读不到录音：' + b64); return; }
+    try {
+      const bin = atob(b64);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      const blob = new Blob([arr], { type: 'audio/mp4' });
+      if (blob.size < 1200) { renderMessage('ai', '太短了，没录到声音'); return; }
+      sendVoice(blob, recStartAt ? (Date.now() - recStartAt) / 1000 : 0);
+    } catch (e) {
+      renderMessage('ai', '处理录音失败：' + (e.message || ''));
+    }
+    return;
+  }
+
+  // WebView 录音收尾
+  try {
+    if (mediaRec && mediaRec.state !== 'inactive') {
+      if (abort) mediaRec.onstop = null;
+      mediaRec.stop();
+    }
+  } catch { /* ignore */ }
+  if (abort) {
+    finishAudioGraph();
+    micRecording = false;
+    recChunks = [];
+  }
+}
+
+// ── 长按语音条：弹出「转文字」 ──
+let vPressTimer = null;
+let vMenuEl = null;
+let suppressVoiceClick = false;
+
+function closeVoiceMenu() {
+  if (vMenuEl && vMenuEl.parentNode) vMenuEl.parentNode.removeChild(vMenuEl);
+  vMenuEl = null;
+}
+
+function hideVoiceText(el) {
+  const bubble = el.closest('.bubble');
+  if (!bubble) return;
+  bubble.querySelectorAll('.vtext').forEach((x) => x.remove());
+}
+
+function showVoiceText(el, text) {
+  const bubble = el.closest('.bubble');
+  if (!bubble) return;
+  bubble.querySelectorAll('.vtext').forEach((x) => x.remove());
+  bubble.insertAdjacentHTML('afterbegin', '<div class="vtext">' + esc(text) + '</div>');
+  scrollBottom();
+}
+
+async function transcribeVoice(el, src) {
+  const bubble = el.closest('.bubble');
+  // 已经显示着 → 这一次是「收起」
+  if (bubble && bubble.querySelector('.vtext')) { hideVoiceText(el); return; }
+
+  // 发的时候已经转过了，直接用缓存，不用再等
+  const cached = el.getAttribute('data-transcript') || '';
+  if (cached) { showVoiceText(el, cached); return; }
+
+  const durEl = el.querySelector('.vdur');
+  const old = durEl ? durEl.textContent : '';
+  if (durEl) durEl.textContent = '识别中';
+  try {
+    const r = await api('/api/asr', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: store.token, url: src }),
+    });
+    const text = (r.text || '').trim();
+    if (durEl) durEl.textContent = old;
+    if (!text) { alert('没识别出内容'); return; }
+    el.setAttribute('data-transcript', text);
+    showVoiceText(el, text);
+  } catch (e) {
+    if (durEl) durEl.textContent = old;
+    alert('转文字失败：' + (e.message || '转写服务没开'));
+  }
+}
+
+function showVoiceMenu(el) {
+  closeVoiceMenu();
+  const src = el.getAttribute('data-src');
+  if (!src) return;
+  suppressVoiceClick = true;
+  const menu = document.createElement('div');
+  menu.className = 'vmenu';
+  const shown = !!(el.closest('.bubble') && el.closest('.bubble').querySelector('.vtext'));
+  menu.innerHTML = '<button>' + (shown ? '收起文字' : '转文字') + '</button>';
+  document.body.appendChild(menu);
+  vMenuEl = menu;
+  const r = el.getBoundingClientRect();
+  const mw = menu.offsetWidth || 88;
+  const mh = menu.offsetHeight || 36;
+  let left = r.left;
+  if (left + mw > window.innerWidth - 8) left = window.innerWidth - mw - 8;
+  let top = r.top - mh - 6;
+  if (top < 8) top = r.bottom + 6;
+  menu.style.left = left + 'px';
+  menu.style.top = top + 'px';
+  menu.querySelector('button').onclick = (ev) => {
+    ev.stopPropagation();
+    closeVoiceMenu();
+    transcribeVoice(el, src);
+  };
+  setTimeout(() => {
+    document.addEventListener('pointerdown', function h(e) {
+      if (vMenuEl && !vMenuEl.contains(e.target)) closeVoiceMenu();
+      document.removeEventListener('pointerdown', h);
+    });
+  }, 30);
+}
+
+if (chatEl) {
+  chatEl.addEventListener('touchstart', (e) => {
+    const v = e.target.closest('.voice');
+    if (!v) return;
+    clearTimeout(vPressTimer);
+    vPressTimer = setTimeout(() => showVoiceMenu(v), 650);
+  }, { passive: true });
+  const cancelPress = () => clearTimeout(vPressTimer);
+  chatEl.addEventListener('touchend', cancelPress);
+  chatEl.addEventListener('touchmove', cancelPress, { passive: true });
+  chatEl.addEventListener('touchcancel', cancelPress);
+  chatEl.addEventListener('contextmenu', (e) => {
+    const v = e.target.closest('.voice');
+    if (!v) return;
+    e.preventDefault();
+    showVoiceMenu(v);
+  });
+  // 长按弹出菜单后，松手那一下不要触发播放
+  chatEl.addEventListener('click', () => {
+    if (suppressVoiceClick) {
+      suppressVoiceClick = false;
+      setTimeout(() => { suppressVoiceClick = false; }, 0);
+    }
+  }, true);
+}
+
+// 长按说话：按住开始，松手发送
+if (voicePad) {
+  const start = (e) => { e.preventDefault(); startVoiceRec(); };
+  const end = (e) => { if (e) e.preventDefault(); if (micRecording) stopVoiceRec(false); };
+  voicePad.addEventListener('touchstart', start, { passive: false });
+  voicePad.addEventListener('touchend', end, { passive: false });
+  voicePad.addEventListener('touchcancel', () => stopVoiceRec(false));
+  voicePad.addEventListener('mousedown', start);
+  voicePad.addEventListener('mouseup', end);
+  voicePad.addEventListener('mouseleave', () => { if (micRecording) stopVoiceRec(false); });
+}
+
+async function sendVoice(blob, durationSec) {
+  const dur = Math.max(0, Math.round(durationSec || 0));
+  const localUrl = URL.createObjectURL(blob);
+  let url = '';
+  try {
+    const up = await uploadBlob(blob);
+    url = up.url;
+  } catch (e) {
+    renderMessage('ai', '语音上传失败：' + (e.message || ''));
+    return;
+  }
+
+  // 后台转文字：AI 要靠它听懂，但气泡里默认不显示（要看得长按语音条）
+  let transcript = '';
+  try {
+    const r = await api('/api/asr', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: store.token, url }),
+    });
+    transcript = (r.text || '').trim();
+  } catch { /* 转不了就只发语音 */ }
+
+  renderMessage('user', '', { audio: localUrl, duration: dur, transcript: transcript, ts: Date.now() });
+
+  const t = typingBubble();
+  try {
+    const r2 = await api('/api/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: store.token, text: transcript || '[语音]', audio: url, transcript }),
+    });
+    const thinkMs = 3000 + Math.random() * 7000;
+    await waitUntil(Date.now() + thinkMs);
+    renderSegments('ai', r2.reply, { images: r2.images, audio: r2.audio, ts: Date.now() }, t);
+  } catch (e) {
+    t.remove();
+    renderMessage('ai', '⚠️ ' + e.message);
+  }
+}
 
 boot();
 setInterval(() => { if (!$('#chat').classList.contains('hidden')) bootSilently(); }, 20000);
@@ -1656,9 +2278,12 @@ function closeAvatarCrop() {
       const cy = (avState.y / 100) * size;
       ctx.drawImage(im, cx - w / 2, cy - h / 2, w, h);
       ctx.restore();
-      saveSettings({ [avKey + 'Avatar']: cv.toDataURL('image/png') });
+      // JPEG 而不是 PNG：头像要同步到服务端，PNG 动辄几百 KB，
+      // 现在压到二三十 KB，传输和存储都稳
+      saveSettings({ [avKey + 'Avatar']: cv.toDataURL('image/jpeg', 0.86) });
       closeAvatarCrop();
       applyHeader();
+      refreshAvatars();   // 聊天区已渲染的消息头像也立刻换掉
       if (avPaintCb) { try { avPaintCb(); } catch { /* ignore */ } }
       if (avFileEl) avFileEl.value = '';
     };
@@ -1706,21 +2331,37 @@ function applyBg() {
     c.style.backgroundRepeat = 'no-repeat';
   }
 
-  const settingsEl = document.getElementById('settingsModal');
+  // 背景图设置现在在主页（点头像进去），预览时把主页收起来
+  const settingsEl = document.getElementById('profilePage');
 
   function open(src) {
     st = { data: src, s: 1, x: 50, y: 50 };
     paint();
-    if (settingsEl) settingsEl.classList.remove('show'); // 预览时收起设置
+    if (settingsEl) settingsEl.classList.remove('show'); // 预览时收起主页
     prev.classList.add('show');
   }
+  // 原生选图回调要用到（Android 把文件选择劫走了，走不到 onchange）
+  window.__openBgPreview = open;
 
-  btn.onclick = () => file.click();
+  btn.onclick = () => {
+    pickMode = 'bg';   // 告诉原生回调：这次选图是换背景，别当成发图片
+    file.click();
+  };
+
+  /** 背景图压一下：原图动辄好几 MB，整个塞进设置会把同步请求撑爆 */
+  function shrinkBg(src, maxSide, quality) {
+    return shrinkImage(src, maxSide, quality);
+  }
+
   file.onchange = () => {
     const f = file.files && file.files[0];
     if (!f) return;
     const r = new FileReader();
-    r.onload = () => open(r.result);
+    r.onload = async () => {
+      let src = r.result;
+      try { src = await shrinkBg(r.result, 1400, 0.82); } catch { /* 压不动就用原图 */ }
+      open(src);
+    };
     r.readAsDataURL(f);
   };
 
@@ -1728,14 +2369,14 @@ function applyBg() {
     prev.classList.remove('show');
     file.value = '';
     applyBg(); // 恢复原来保存的背景
-    if (settingsEl) settingsEl.classList.add('show'); // 回到设置
+    if (settingsEl) settingsEl.classList.add('show'); // 回到主页
   };
   confirm.onclick = () => {
     saveSettings({ bgImage: st.data, bgScale: st.s, bgX: st.x, bgY: st.y });
     prev.classList.remove('show');
     file.value = '';
     applyBg();
-    if (settingsEl) settingsEl.classList.add('show'); // 回到设置
+    if (settingsEl) settingsEl.classList.add('show'); // 回到主页
   };
   if (clear) {
     clear.onclick = () => {
@@ -2116,7 +2757,7 @@ function compressToDataUrl(file, maxSide) {
 })();
 
 // ── 原生选图回调（Android 侧读 Uri 后注入 dataURL，绕过 input 的 change）──
-let pickMode = 'image';       // 'image' | 'sticker' | 'avatar'
+let pickMode = 'image';       // 'image' | 'sticker' | 'avatar' | 'bg'
 let avatarPickKey = null;     // 'me' | 'ai'
 let avatarPickCb = null;
 
@@ -2125,6 +2766,29 @@ function beginAvatarPick(key, cb) {
   pickMode = 'avatar';
   avatarPickKey = key;
   avatarPickCb = cb || null;
+}
+
+/** 图片压到最长边 maxSide 的 JPEG dataURL（头像、背景图都用它） */
+function shrinkImage(src, maxSide, quality) {
+  return new Promise((resolve, reject) => {
+    const im = new Image();
+    im.onload = () => {
+      try {
+        const scale = Math.min(1, maxSide / Math.max(im.width, im.height));
+        const w = Math.max(1, Math.round(im.width * scale));
+        const h = Math.max(1, Math.round(im.height * scale));
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        const ctx = cv.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(im, 0, 0, w, h);
+        resolve(cv.toDataURL('image/jpeg', quality));
+      } catch (e) { reject(e); }
+    };
+    im.onerror = () => reject(new Error('读图失败'));
+    im.src = src;
+  });
 }
 
 window.__onNativePick = async function (dataUrl) {
@@ -2137,6 +2801,14 @@ window.__onNativePick = async function (dataUrl) {
       avatarPickKey = null;
       avatarPickCb = null;
       openAvatarCrop(dataUrl, key, cb);
+      return;
+    }
+    // 换聊天背景：进预览界面，同样不能当图片发出去
+    if (pickMode === 'bg') {
+      pickMode = 'image';
+      let src = dataUrl;
+      try { src = await shrinkImage(dataUrl, 1400, 0.82); } catch { /* 压不动用原图 */ }
+      if (window.__openBgPreview) window.__openBgPreview(src);
       return;
     }
     const blob = dataUrlToBlob(dataUrl);
@@ -2159,7 +2831,7 @@ window.__onNativePick = async function (dataUrl) {
       const pv = document.getElementById('preview');
       const pi = document.getElementById('previewImg');
       if (pv && pi) { pi.src = dataUrl; pv.style.display = 'block'; }
-      sendBtn.disabled = false;
+      setSendEnabled(true);
     }
   } catch (err) {
     renderMessage('ai', '处理图片失败：' + (err && err.message ? err.message : err));
@@ -2182,7 +2854,11 @@ window.__onNativePick = async function (dataUrl) {
       tab.classList.add('on');
       const which = tab.dataset.ptab;
       page.querySelectorAll('.pp-page').forEach((pg) => { pg.hidden = pg.id !== 'pp-' + which; });
-      if (which === 'diary') loadDiary();
+      if (which === 'diary') {
+        // 预加载过就直接显示；无论哪种，都按当前昵称重画一遍
+        if (!diaryInited) loadDiary(true);
+        else renderDiary();
+      }
     };
   });
 
@@ -2238,6 +2914,23 @@ window.__onNativePick = async function (dataUrl) {
     };
   }
 
+  // 日间 / 夜间切换
+  const schemeEl = document.getElementById('ppScheme');
+  if (schemeEl) {
+    const paintScheme = () => {
+      const cur = loadSettings().scheme === 'light' ? 'light' : 'dark';
+      schemeEl.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.scheme === cur));
+    };
+    schemeEl.querySelectorAll('button').forEach((b) => {
+      b.onclick = () => {
+        saveSettings({ scheme: b.dataset.scheme });
+        applySettings();
+        paintScheme();
+      };
+    });
+    paintScheme();
+  }
+
   const colors = document.getElementById('ppColors');
   if (colors) {
     const cur = loadSettings().meColor || '#6d4dfa';
@@ -2291,32 +2984,138 @@ window.__onNativePick = async function (dataUrl) {
   }
   if (diaryDateEl) diaryDateEl.textContent = dayLabel(todayKey());
 
-  async function loadDiary() {
+  // 日记：先只拉最新 3 条，点开立刻能看；往下翻再续，不用一次全拉
+  const DIARY_PAGE = 3;
+  let diaryItems = [];       // 新 → 老
+  let diaryHasMore = true;
+  let diaryOldestTs = 0;
+  let diaryLoading = false;
+  let diaryInited = false;
+  let diaryEditingTs = 0;
+
+  function renderDiary() {
+    if (!diaryListEl) return;
+    if (!diaryItems.length) {
+      diaryListEl.innerHTML = '<div class="pp-empty">还没有日记，今天想写点什么？</div>';
+      return;
+    }
+    const groups = [];
+    const idx = new Map();
+    for (const it of diaryItems) {
+      const key = it.date || todayKey();
+      if (!idx.has(key)) { idx.set(key, groups.length); groups.push({ day: key, list: [] }); }
+      groups[idx.get(key)].list.push(it);
+    }
+    diaryListEl.innerHTML = groups.map((g) =>
+      '<div class="diary-item"><div class="diary-day">' + esc(dayLabel(g.day)) + '</div>'
+      + g.list.map((it) => {
+          const ts = Number(it.ts) || 0;
+          if (ts && ts === diaryEditingTs) {
+            return '<div class="diary-text editing">'
+              + '<textarea class="dedit" data-ts="' + ts + '">' + esc(it.text) + '</textarea>'
+              + '<div class="dedit-btns">'
+              + '<button class="dbtn" data-act="cancel">取消</button>'
+              + '<button class="dbtn primary" data-act="save" data-ts="' + ts + '">保存</button>'
+              + '</div></div>';
+          }
+          return '<div class="diary-text">'
+            + (it.who === 'ai' ? '<span class="diary-who">' + esc(loadSettings().aiNick || '星汐') + '</span>' : '')
+            + '<span class="dtxt">' + esc(it.text) + '</span>'
+            + '<span class="dact">'
+            + '<button class="dbtn" data-act="edit" data-ts="' + ts + '" title="编辑" aria-label="编辑">'
+            + '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+            + '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>'
+            + '</svg></button>'
+            + '<button class="dbtn" data-act="del" data-ts="' + ts + '" title="删除" aria-label="删除">'
+            + '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+            + '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>'
+            + '<path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>'
+            + '</svg></button>'
+            + '</span></div>';
+        }).join('')
+      + '</div>'
+    ).join('') + (diaryHasMore ? '<div class="pp-empty">往下翻继续加载…</div>' : '');
+  }
+
+  async function loadDiary(reset) {
     if (!diaryListEl || !store.token) return;
+    if (diaryLoading) return;
+    if (!reset && !diaryHasMore) return;
+    diaryLoading = true;
     try {
-      const r = await api('/api/diary?token=' + encodeURIComponent(store.token));
-      const items = (r.items || []).slice().reverse();
-      if (!items.length) {
-        diaryListEl.innerHTML = '<div class="pp-empty">还没有日记，今天想写点什么？</div>';
+      const q = reset
+        ? ('&limit=' + DIARY_PAGE)
+        : ('&limit=' + (DIARY_PAGE * 4) + '&before=' + diaryOldestTs);
+      const r = await api('/api/diary?token=' + encodeURIComponent(store.token) + q);
+      const items = (r.items || []).slice().reverse();   // 服务端升序 → 前端降序（新在上）
+      diaryHasMore = Boolean(r.hasMore);
+      diaryItems = reset ? items : diaryItems.concat(items);
+      if (diaryItems.length) diaryOldestTs = Number(diaryItems[diaryItems.length - 1].ts || 0);
+      diaryInited = true;
+      renderDiary();
+    } catch (e) {
+      if (!diaryInited) diaryListEl.innerHTML = '<div class="pp-empty">加载失败：' + esc(e.message || '网络错误') + '</div>';
+    } finally {
+      diaryLoading = false;
+    }
+  }
+
+  // 往下翻接近底部就续下一页
+  const ppBodyEl = document.querySelector('.pp-body');
+  if (ppBodyEl) {
+    ppBodyEl.addEventListener('scroll', () => {
+      const pg = document.getElementById('pp-diary');
+      if (!pg || pg.hidden) return;
+      if (ppBodyEl.scrollTop + ppBodyEl.clientHeight >= ppBodyEl.scrollHeight - 120) loadDiary(false);
+    }, { passive: true });
+  }
+
+  // 日记的改 / 删 / 存
+  if (diaryListEl) {
+    diaryListEl.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.dbtn');
+      if (!btn) return;
+      const act = btn.dataset.act;
+      const ts = Number(btn.dataset.ts || 0);
+
+      if (act === 'edit') { diaryEditingTs = ts; renderDiary(); return; }
+      if (act === 'cancel') { diaryEditingTs = 0; renderDiary(); return; }
+
+      if (act === 'save') {
+        const ta = diaryListEl.querySelector('textarea.dedit[data-ts="' + ts + '"]');
+        const text = ta ? ta.value.trim() : '';
+        if (!text) return;
+        btn.disabled = true;
+        try {
+          await api('/api/diary/update', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: store.token, ts: ts, text: text }),
+          });
+          const it = diaryItems.find((x) => Number(x.ts) === ts);
+          if (it) it.text = text;
+          diaryEditingTs = 0;
+          renderDiary();
+        } catch (err) {
+          alert('改不了：' + (err.message || '网络错误'));
+          btn.disabled = false;
+        }
         return;
       }
-      const groups = [];
-      const idx = new Map();
-      for (const it of items) {
-        const key = it.date || todayKey();
-        if (!idx.has(key)) { idx.set(key, groups.length); groups.push({ day: key, list: [] }); }
-        groups[idx.get(key)].list.push(it);
+
+      if (act === 'del') {
+        if (!confirm('删掉这篇日记？删了就找不回来了。')) return;
+        try {
+          await api('/api/diary/delete', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: store.token, ts: ts }),
+          });
+          diaryItems = diaryItems.filter((x) => Number(x.ts) !== ts);
+          renderDiary();
+        } catch (err) {
+          alert('删不掉：' + (err.message || '网络错误'));
+        }
       }
-      diaryListEl.innerHTML = groups.map((g) =>
-        '<div class="diary-item"><div class="diary-day">' + esc(dayLabel(g.day)) + '</div>'
-        + g.list.map((it) => '<div class="diary-text">'
-            + (it.who === 'ai' ? '<span class="diary-who">星汐</span>' : '')
-            + esc(it.text) + '</div>').join('')
-        + '</div>'
-      ).join('');
-    } catch (e) {
-      diaryListEl.innerHTML = '<div class="pp-empty">加载失败：' + esc(e.message || '网络错误') + '</div>';
-    }
+    });
   }
 
   async function publishDiary() {
@@ -2332,7 +3131,7 @@ window.__onNativePick = async function (dataUrl) {
         body: JSON.stringify({ token: store.token, text: text, date: todayKey() }),
       });
       if (diaryInputEl) diaryInputEl.value = '';
-      await loadDiary();
+      await loadDiary(true);
     } catch (e) {
       alert('写入失败：' + (e.message || '网络错误'));
     } finally {
@@ -2341,7 +3140,8 @@ window.__onNativePick = async function (dataUrl) {
     }
   }
   if (diarySendEl) diarySendEl.onclick = publishDiary;
-  window.__loadDiary = loadDiary;
+  window.__loadDiary = (reset) => loadDiary(reset !== false);
+  window.__renderDiary = renderDiary;
 
   paintProfile();
 })();

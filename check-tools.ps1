@@ -1,10 +1,10 @@
-﻿# Check optional tools (speech-to-text / text-to-speech)
+﻿# Check optional tools (image cards / speech-to-text / text-to-speech)
 #
-# Both are optional: "installed is better, not installed still works".
-#   - detected  -> report "enabled"; TideGleam.exe starts it in background itself
+# All are optional: "installed is better, not installed still works".
+#   - detected  -> report "enabled"; the server uses it (or starts it in background)
 #   - missing   -> report "skipped"; nothing else is affected
 #
-# Called by the launcher .bat file. Keep all output ASCII so cmd never garbles it.
+# Called by the launcher .bat. Keep all output ASCII so cmd never garbles it.
 
 $ErrorActionPreference = 'SilentlyContinue'
 $root = $PSScriptRoot
@@ -27,6 +27,24 @@ if (-not $c -or -not $c.tools) {
 
 $py = [string]$c.tools.python
 $hasPy = ($py -and (Test-Path $py))
+$toolsOn = ($c.tools.enabled -eq $true)
+
+# --- Image cards (Pillow) ---
+# No daemon needed. Only used when the AI wants to send a card image.
+# Without Pillow it simply cannot send images; nothing else breaks.
+if (-not $toolsOn) {
+    Say 'Image cards: tools.enabled is false, skipped.'
+} elseif (-not $hasPy) {
+    Say 'Image cards: Python not configured, skipped (AI just won''t send card images).'
+} else {
+    $pilOk = $false
+    try { & $py -c "import PIL" 2>$null; $pilOk = ($LASTEXITCODE -eq 0) } catch { }
+    if ($pilOk) {
+        Say 'Image cards: enabled.'
+    } else {
+        Say 'Image cards: Pillow (PIL) not installed, skipped (pip install pillow to enable).'
+    }
+}
 
 # --- Speech to text (whisper) ---
 $asrScript = Join-Path $appDir 'asr_server.py'

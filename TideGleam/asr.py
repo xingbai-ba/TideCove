@@ -15,15 +15,17 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 def _find_model():
-    """模型目录：环境变量 > 包内 models\whisper-small > 本机默认路径"""
+    """模型目录：环境变量 ASR_MODEL > 包内 models/whisper-small
+
+    不写任何本机绝对路径——发布出去的东西不能带开发者自己的目录结构。
+    """
     p = os.environ.get('ASR_MODEL')
     if p and os.path.isdir(p):
         return p
-    for rel in ('models/whisper-small', os.path.join('models', 'whisper-small')):
-        cand = os.path.join(_HERE, rel)
-        if os.path.isdir(cand):
-            return cand
-    return r'E:\肥鱼\checkpoints\hf_cache\models--openai--whisper-small\snapshots\973afd24965f72e36ca33b3055d56a652f456b4d'
+    cand = os.path.join(_HERE, 'models', 'whisper-small')
+    if os.path.isdir(cand):
+        return cand
+    return ''
 
 
 MODEL_DIR = _find_model()
@@ -34,6 +36,11 @@ _state = {'model': None, 'proc': None, 'device': 'cpu'}
 def load():
     if _state['model'] is not None:
         return
+    if not MODEL_DIR:
+        raise RuntimeError(
+            '没找到 whisper 模型。请把模型放到 TideGleam\\models\\whisper-small\\，'
+            '或者设置环境变量 ASR_MODEL 指向模型目录。'
+        )
     import torch
     from transformers import WhisperProcessor, WhisperForConditionalGeneration
     dev = 'cuda' if torch.cuda.is_available() else 'cpu'

@@ -637,9 +637,9 @@
     <div class="page" id="page-ai">
       <div class="profile">
         <div class="set-avatar" id="aiAvatarView"><img src="/icon-192.png" alt=""></div>
-        <div class="set-nick" id="aiNickView">星汐</div>
+        <div class="set-nick" id="aiNickView">小鱼</div>
         <input type="file" id="aiAvatarFile" accept="image/*" hidden>
-        <input type="text" id="aiNickInput" maxlength="12" placeholder="星汐" hidden>
+        <input type="text" id="aiNickInput" maxlength="12" placeholder="小鱼" hidden>
       </div>
       <div class="set-row">
         <label>对方的气泡颜色</label>
@@ -655,7 +655,7 @@
       <div class="themes" id="themes"></div>
     </div>
 
-    <div class="set-ver">TideCove 1.2.35</div>
+    <div class="set-ver">TideCove 1.2.38</div>
   </div>
 </div>
 
@@ -748,7 +748,7 @@ function notifyIncoming(text) {
   try { navigator.vibrate?.([70, 45, 70]); } catch { /* 没权限就算了 */ }
   flashTitle();
   if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-    try { new Notification((loadSettings().aiNick || '星汐'), { body: String(text).slice(0, 80), tag: 'tidecove', renotify: true }); } catch { /* ignore */ }
+    try { new Notification((loadSettings().aiNick || '小鱼'), { body: String(text).slice(0, 80), tag: 'tidecove', renotify: true }); } catch { /* ignore */ }
   }
 }
 
@@ -2109,7 +2109,7 @@ const COLORS = ['#6d4dfa', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#ec4899'
   }
 
   const paintMe = setupProfile({ viewId: 'meAvatarView', nickId: 'meNickView', fileId: 'meAvatarFile', inputId: 'meNickInput', defaultNick: '主人', key: 'me' });
-  const paintAi = setupProfile({ viewId: 'aiAvatarView', nickId: 'aiNickView', fileId: 'aiAvatarFile', inputId: 'aiNickInput', defaultNick: '星汐', key: 'ai' });
+  const paintAi = setupProfile({ viewId: 'aiAvatarView', nickId: 'aiNickView', fileId: 'aiAvatarFile', inputId: 'aiNickInput', defaultNick: '小鱼', key: 'ai' });
 
   // 颜色板
   function setupColors(elId, key, fallback) {
@@ -3019,7 +3019,7 @@ window.__onNativePick = async function (dataUrl) {
               + '</div></div>';
           }
           return '<div class="diary-text">'
-            + (it.who === 'ai' ? '<span class="diary-who">' + esc(loadSettings().aiNick || '星汐') + '</span>' : '')
+            + (it.who === 'ai' ? '<span class="diary-who">' + esc(loadSettings().aiNick || '小鱼') + '</span>' : '')
             + '<span class="dtxt">' + esc(it.text) + '</span>'
             + '<span class="dact">'
             + '<button class="dbtn" data-act="edit" data-ts="' + ts + '" title="编辑" aria-label="编辑">'

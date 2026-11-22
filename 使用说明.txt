@@ -1,189 +1,260 @@
+﻿========================================
+ TideCove 1.3.7  使用说明
 ========================================
- TideCove / TideGleam  1.2.38
+
+【这一版最大的变化】
+
+  · 不再需要 DSH（DeepSeek Harness）
+  · 自动检测你电脑上装了哪些 AI，有哪个就连哪个
+  · 每个 AI 独立对话、独立历史、独立设置
+  · 一个界面，同时和多个 AI 聊天
+
+【支持的 AI】（装一个用一个，没装就跳过）
+
+  ⚠ 注意：Claude Code 和 Gemini CLI 是【终端版本】，不是桌面客户端！
+
+    它们都是命令行工具，没有可以双击打开的图标，也不是 App。
+    安装、登录、使用全部在「命令提示符 / PowerShell」里完成。
+    想确认装没装：打开命令行，敲对应的命令看有没有反应。
+
+    Claude Code       终端版本（命令行工具）
+                      命令行敲 claude --version 有反应就算装好
+
+    Gemini CLI        终端版本（命令行工具）
+                      命令行敲 gemini --version
+
+    Codex(ChatGPT)    命令行敲 codex --version
+
+    Kimi Code CLI     命令行敲 kimi --version
+
+    DeepSeek Harness  可选，装了就用，不装也不影响
+
+  启动时程序会自己扫一遍，窗口里会列出结果：
+    [OK] Claude
+    [--] ChatGPT      <- 没装的就这样跳过
+
+【为什么这一版要装 Tailscale】
+
+  手机在外面要连家里的电脑，得有个固定地址。
+  上一版用 Cloudflare 免费隧道，国内手机网络经常打不开（网页无法打开），
+  所以 1.3.0 改用 Tailscale：点对点直连、地址固定、运营商拦不住。
+
+  代价是电脑和手机都要装一次 Tailscale，装完就一劳永逸。
+
+
+========================================
+ 第一步  电脑上装 Tailscale
 ========================================
 
-【三步就能用】
+ 1.1  安装
+   双击本文件夹里的：Tailscale-setup-1.104.7-amd64.msi
+   → 点【Next】
+   → 勾选【I accept...】
+   → 点【Install】
+   → 等进度条走完
+   → 点【Finish】
 
-  1. 双击本文件夹里的「启动.bat」
-  2. 等几秒，会自动弹出一个网页（配对页面）
-  3. 手机装上 TideCove.apk，填地址和配对码，连上
+ 1.2  登录
+   装完看屏幕右下角托盘区（时间旁边，可能要点向上的小箭头展开），
+   会多出一个【黑白小方块】图标，那就是 Tailscale。
+   → 右键这个图标
+   → 点【Log in...】
+   → 浏览器会自动打开登录页
+   → 选【Sign in with GitHub】（有账号的话）
+   → 或者选【Enter your email】用邮箱收验证链接
+   → 登录完成后浏览器会提示成功，桌面托盘图标变成实心
 
-没了。就这三步。
+ 1.3  记下电脑的地址（等会儿手机要用）
+   浏览器打开：
+     https://login.tailscale.com/admin/machines
+   → 列表里找到你这台电脑（名字可能是电脑名或 sacrifice）
+   → 记下它旁边那个 100.x.x.x 的数字（例如 100.123.237.25）
 
-
-【启动窗口说明】
-
-  启动后会弹出一个黑色窗口，上面是英文提示（比如 Starting server...）。
-  这是正常的，英文是为了兼容各种 Windows 编码，不会乱码。
-
-  窗口里会顺便告诉你两个可选工具的状态：
-    · Speech-to-text: enabled / skipped     （语音转文字）
-    · Text-to-speech: enabled / skipped     （语音合成）
-  显示 skipped 就是没装，不影响聊天。
-
-  【重要】这个窗口不能关，关掉就等于停止服务。
-
-
-【第一次运行会弹安全提示】
-
-  TideGleam.exe 没有做代码签名（个人项目，签名证书每年上千元，不值）。
-  双击启动时 Windows 可能弹出「Windows 已保护你的电脑」，提示「未知发布者」——
-  这是未签名软件的正常现象，不是病毒报警。
-
-  点「更多信息」→ 点「仍要运行」，就正常启动了。
-
-  想确认文件没被改过，去 Releases 页面看该版本说明里给出的 SHA256。
+ 1.4  验证一下
+   手机和电脑都装好 Tailscale 后，在电脑上打开浏览器，
+   访问 http://你记下的那个100.x.x.x:8080
+   能看到 TideCove 的登录页，说明通了。
 
 
-【1.2.38 更新了什么】
+========================================
+ 第二步  电脑上启动 TideCove
+========================================
 
-  语音
-    · 点麦克风切到语音输入框，长按说话（有声纹），松手自动转文字并发送
-    · 录音走 App 原生，绕开 WebView 采集不到麦克风的毛病
-    · 语音条很细，显示秒数；长按语音条可「转文字 / 收起文字」
+ 2.1  双击【启动.bat】
 
-  日记
-    · 只先加载最新 3 条，往下翻再续
-    · 每条能编辑（铅笔）、删除（垃圾桶）
-    · AI 写的日记显示你给它起的昵称
+ 2.2  会弹出一个黑色窗口，里面会显示：
 
-  外观
-    · 夜间（暗紫）/ 日间（纯白）切换，带渐变过渡
-    · 上下边框随模式变色（夜间浅紫、日间灰）
-    · 主题配色全局生效，头像/文字/对方气泡保持不变
+    [OK] claude            <- 检测到的 AI
+    [--] codex            <- 没装，跳过
+    配对码: 123456         <- 手机配对要用
+    局域网: http://192.168.x.x:8080
+    公网:   http://100.x.x.x:8080
 
-  稳定性
-    · 设置（含头像、背景图）会同步到服务端，换域名后自动恢复
-    · 语音工具挂掉会自动拉起，不用手动开
-    · 修了换头像/换背景时图片误发到输入框的 bug
-    · 顶栏状态固定「在线」，不再跳到「发送中 / 连接中」
+ 2.3  【重要】这个黑色窗口不能关！
+   关掉窗口 = 停止服务，手机立刻就断了。
 
-
-【可选工具（不装也能用，装了更好）】
-
-  下面两个都是可选的。启动脚本会自动检测：
-    · 检测到 → 显示「已启用」，服务端会在后台拉起
-    · 没检测到 → 显示「跳过」，不影响聊天任何功能
-
-  ────────────────────────────────
-  工具一：语音转文字（把你说的话变成文字）
-  ────────────────────────────────
-
-  作用：你发语音时，AI 才能听懂你说什么。不装的话语音能发能回放，
-        但 AI 收到的只有「[语音]」两个字。
-
-  一、装 Python 3.10 或 3.11
-      https://www.python.org/downloads/
-      安装时务必勾上「Add Python to PATH」
-
-  二、装依赖（命令提示符里跑一次，慢就加清华源）
-      pip install torch transformers librosa soundfile opencc-python-reimplemented av
-      pip install ... -i https://pypi.tuna.tsinghua.edu.cn/simple
-
-  三、下模型（约 926 MB，走国内镜像）
-      set HF_ENDPOINT=https://hf-mirror.com
-      python -c "from huggingface_hub import snapshot_download; snapshot_download('openai/whisper-small', local_dir=r'D:\whisper-small')"
-
-      下完把 whisper-small 整个文件夹放到：
-          TideGleam\models\whisper-small\
-
-  四、配置
-      把 TideGleam\config.example.json 复制成 TideGleam\config.json，
-      改 tools 里的 python 路径：
-
-          "python": "C:\\Python311\\python.exe"
-
-  速度：服务刚起的第一条语音约 10 秒（加载模型），之后每条 0.3~1 秒。
-
-  ────────────────────────────────
-  工具二：语音合成（让 AI 用特定音色说话）
-  ────────────────────────────────
-
-  作用：AI 发语音时用你的音色，而不是系统那个机械女声。
-        不装的话 AI 发的语音会是 Windows 自带的合成音。
-
-  一、需要 GPT-SoVITS（一个独立的语音克隆项目，需自己部署）
-      它自带 Python 环境和网页界面，跑起来后在 9880 端口提供服务。
-
-  二、准备一段参考音频（5~10 秒，wav 格式），比如：
-          E:\你的路径\参考音频.wav
-      再准备好这段音频对应的一句话文字。
-
-  三、配置 config.json：
-
-          "tools": {
-            "enabled": true,
-            "python": "你的GPT-SoVITS\venv\Scripts\python.exe",
-            "ttsUrl": "http://127.0.0.1:9880",
-            "ttsScript": "你的GPT-SoVITS\app\api_v2.py",
-            "ttsArgs": ["-a", "127.0.0.1", "-p", "9880"],
-            "refAudio": "E:\你的路径\参考音频.wav",
-            "promptText": "参考音频里说的那句话"
-          }
-
-  说明：配了 ttsScript 之后，服务端会自己把 GPT-SoVITS 拉起来（后台无窗口），
-        你不用手动启动。没配就跳过，AI 语音退回系统声音。
-
-  判据：合成出来的 wav 采样率是 32000 Hz 才是 GPT-SoVITS；
-        22050 Hz 就是退回系统声音了。
+ 2.4  第一次运行的安全提示
+   TideGleam.exe 没做代码签名，Windows 会弹
+   「Windows 已保护你的电脑 / 未知发布者」：
+   → 点【更多信息】
+   → 点【仍要运行】
+   这是未签名程序的正常现象，不是病毒。
 
 
-【已知限制】
+========================================
+ 第三步  手机上装 Tailscale
+========================================
 
-  · 消息提示音在部分手机 WebView 上不响（系统 autoplay 策略）
-  · 同一时间只能连一台手机（设计如此，换设备要在管理页解绑）
-  · 本版不含长期记忆/数据库（上下文由 DSH 会话管理）
-  · 电脑关机或睡眠后手机连不上（服务器在你电脑上）
-  · 公网地址每次重启隧道都会变，换了地址要重新配对一次
-    （重新配对后，头像昵称表情背景都会自动恢复）
-  · 语音转文字 / 语音合成默认关闭，要自己装（见上面「可选工具」）
+ 3.1  把 Tailscale-1.104.7.apk 传到手机并安装
+   （数据线、微信传文件、网盘都行）
 
+ 3.2  登录（重点：不要点 Log in）
 
-【目录】
+   ⚠ 手机点 Log in 会跳浏览器打开 GitHub，国内经常打不开。
+     所以我们用 auth key 登录，完全不碰浏览器。
 
-  启动.bat            双击这个启动（会自动检查可选工具）
-  check-tools.ps1     启动时被调用，只做检测和提示，不装也不影响
-  TideCove.apk        手机安装包（1.2.38）
-  LICENSE             使用许可
-  README.md           项目说明
-  TideGleam\          服务端（不用动）
-       TideGleam.exe
-       public\
-       asr.py              语音转文字脚本（可选）
-       asr_server.py       转写常驻服务（服务端自动拉起）
-       models\             放 whisper 模型（自己建，可选）
-       config.example.json
+   a) 回到电脑，浏览器打开：
+        https://login.tailscale.com/admin/settings/keys
 
+   b) 点页面上的【Generate auth key】
+      → 弹出窗口里直接点【Generate key】
+      → 复制生成的那串 tskey-auth-xxxxxxxx
 
-【配置】（可选）
+   c) 打开手机上的 Tailscale App
 
-把 TideGleam\config.example.json 复制成 TideGleam\config.json 再改：
+   d) 点右上角的【设置】图标（齿轮 / 三条横线）
 
-    port              端口，默认 8080
-    dshUrl            DSH 地址，"auto" 自动探测
-    replyTimeoutMs    回复超时，默认 90000
-    onebot.reportUrl  事件上报地址（留空只走 WebSocket）
-    tools.enabled     画图/语音/转写开关（默认 false）
-    tools.python      语音相关工具用的 Python 路径
-    tools.ttsScript   GPT-SoVITS 启动脚本（配了才会自动拉起）
-    tools.asrModel    whisper 模型目录
+   e) 点【Accounts】
 
+   f) 点这个页面右上角的【三个点】（kebab 菜单）
 
-【数据在哪】
+   g) 选【Use an auth key】
 
-TideGleam\data\ 下：
-    device.json       已配对的手机（删掉 = 解绑）
-    pair-code.txt     当前配对码
-    history.jsonl     聊天记录
-    diary.jsonl       日记
-    settings.json     界面设置备份（头像/昵称/主题/背景）
-    my-stickers.json  自上传的表情备份
-    uploads\          图片、语音和合成文件
-    session.json      AI 会话状态
-    last-public-url.txt  上次的公网地址（变了会自动解绑）
+   h) 长按输入框，粘贴刚才复制的 tskey-auth-...
+
+   i) 点确认
+
+   j) 成功后：
+      · 主界面顶部变成 Connected
+      · 列表里会出现你电脑的 100.x.x.x 地址
+
+ 3.3  【重要】Tailscale App 要一直开着
+   可以放后台，但别从最近任务里划掉，也别关。
+   它一断，手机就连不上电脑。
 
 
-【前提】
+========================================
+ 第四步  手机上装 TideCove 并配对
+========================================
 
-电脑上要跑着 DeepSeek Harness（DSH）。
-本工具是 DSH 的附属品——没有它，服务端起得来，但聊不了天。
+ 4.1  安装 TideCove.apk
+
+ 4.2  打开 App，会要求【输入服务器地址】
+   填：（把 x 换成第一步 1.3 记下的地址）
+        http://100.x.x.x:8080
+
+   ⚠ 注意是 http，不是 https
+   ⚠ 地址里不要有空格
+
+ 4.3  输入配对码
+   就是启动窗口里那个 6 位数字
+
+ 4.4  点【绑定】
+
+ 4.5  进去后先点右上角齿轮看版本
+   显示「TideCove 1.3.7」就是新版本
+
+
+========================================
+ 第五步  开始使用
+========================================
+
+ · 顶部右边有个紫色胶囊，显示当前 AI 名字（比如 DeepSeek）
+ · 点它 → 弹出 AI 列表
+ · 点你想聊的那个（绿点=可用，灰=没装/没登录）
+ · 每个 AI 是独立对话，切来切去不会串
+
+ · 点右上角齿轮 = 改【当前这个 AI】的设置
+   可以单独改它的头像、昵称、气泡颜色、字体大小、聊天背景
+
+ · 发图片后点开大图，底部有【保存图片】按钮
+   App 里会直接存进手机相册（Pictures/TideCove）
+
+
+========================================
+ 常见问题
+========================================
+
+ Q1: 手机提示「网页无法打开」
+   ① 检查手机 Tailscale App 是不是开着、显示 Connected
+   ② 检查地址是不是 http://100.x.x.x:8080（不是 https）
+   ③ 检查电脑上那个黑色窗口还在不在
+
+ Q2: 地址填对了还是连不上
+   电脑上打开浏览器访问 http://100.x.x.x:8080 试试。
+   电脑能开、手机不能开，说明 Tailscale 没连上（看 3.2 第 j 步）。
+
+ Q3: 切换 AI 时看到别的 AI 的历史
+   这通常是旧版本残留的缓存。
+   → 手机设置 → 应用 → TideCove → 存储 → 清除数据
+   → 重新配对一次（地址和配对码同上）
+   1.3.0 已经修好这个问题。
+
+ Q4: 某个 AI 点了提示「请登录」
+   那个 AI 的命令行工具还没登录。在电脑的「命令提示符」里运行一次：
+     claude   （Claude Code —— 终端版本，不是 App）
+     gemini   （Gemini CLI —— 终端版本，不是 App）
+     codex    （Codex）
+     kimi     （Kimi）
+   按提示走完登录，之后再点就能用了。
+
+   ⚠ Claude Code 和 Gemini CLI 没有桌面图标，别去找 App。
+     开始菜单搜「cmd」或「PowerShell」打开命令行，敲上面那些命令。
+
+ Q5: 窗口里检测不到某个 AI
+   说明它的命令不在 PATH 里。命令行敲一下验证：
+     claude --version
+     gemini --version
+     codex --version
+     kimi --version
+   哪个没反应，就是没装或没配好。
+
+ Q6: 手机老是要重新配对
+   配对码是一次性的。如果电脑重启过、或者地址变过，
+   需要重新看启动窗口里的新配对码。
+
+ Q7: Tailscale 会不会偷看我东西
+   它只是打一条加密的通道，让手机能访问你电脑上的
+   TideCove（8080 端口），不经过任何第三方服务器存数据。
+   所有聊天记录都在你自己电脑的 data 文件夹里。
+
+
+========================================
+ 发版信息
+========================================
+
+  版本：1.3.7
+
+  TideCove.apk
+    SHA256: F52AFE8400C42B754AD166FE7EE9B1987910922690DD0D46E08AD9DD819BC77B
+    大小：54,057 字节
+
+  Tailscale-1.104.7.apk
+    SHA256: 5A620E118C36A203BDDE43DDD93EF4122CE2D8AB2F7AD59EC30B6BBF391E01D9
+    大小：100.8 MB
+
+  Tailscale-setup-1.104.7-amd64.msi
+    SHA256: 676B5B32FDD1AEAEE90D8E8F38E222635B216FBDFBF877BF01CB1D7CDA330EC5
+    大小：37.0 MB
+
+  TideGleam.exe
+    SHA256: 163B47470A8C825E9062164D8BB56DFA46B5B392DE569869C4242197940A6A4A
+    大小：90.1 MB
+
+  【未签名说明】
+  TideGleam.exe 没有代码签名（个人项目，证书太贵）。
+  Windows 首次运行会提示「未知发布者」，点
+  【更多信息】→【仍要运行】即可。
+  想确认文件没被篡改，用上面的 SHA256 校验。
+
+========================================

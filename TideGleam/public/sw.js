@@ -1,5 +1,4 @@
-// TideCove Service Worker —— 让 PWA 可安装 + 断网时还能打开壳
-const CACHE = 'tidecove-v1238';
+// TideCove Service Worker 鈥斺€?璁?PWA 鍙畨瑁?+ 鏂綉鏃惰繕鑳芥墦寮€澹?const CACHE = 'tidecove-v1308';
 const SHELL = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (e) => {
@@ -17,10 +16,9 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  // API 和上传文件一律走网络，不缓存
+  // API 鍜屼笂浼犳枃浠朵竴寰嬭蛋缃戠粶锛屼笉缂撳瓨
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/uploads/')) return;
-  // 只处理同源
-  if (url.origin !== location.origin) return;
+  // 鍙鐞嗗悓婧?  if (url.origin !== location.origin) return;
 
   e.respondWith(
     fetch(req)

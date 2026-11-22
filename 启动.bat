@@ -3,11 +3,12 @@ cd /d "%~dp0"
 set "TIDECOVE_ROOT=%~dp0TideGleam"
 
 echo.
-echo   TideCove x TideGleam 1.2.38
+echo   TideCove x TideGleam 1.3.0
 echo   ---------------------------------
 echo   Starting server...
 echo.
 echo   NOTE: keep this window open. Closing it stops the server.
+echo   AI clients are detected automatically - see the list below.
 echo.
 
 rem Check optional tools (speech-to-text / text-to-speech).

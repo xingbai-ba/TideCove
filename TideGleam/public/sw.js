@@ -1,4 +1,4 @@
-// TideCove Service Worker 鈥斺€?璁?PWA 鍙畨瑁?+ 鏂綉鏃惰繕鑳芥墦寮€澹?const CACHE = 'tidecove-v1308';
+// TideCove Service Worker 鈥斺€?璁?PWA 鍙畨瑁?+ 鏂綉鏃惰繕鑳芥墦寮€澹?const CACHE = 'tidecove-v1325';
 const SHELL = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (e) => {

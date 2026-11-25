@@ -28,8 +28,7 @@
   header { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
   .logo {
     width: 44px; height: 44px; border-radius: 14px;
-    background: linear-gradient(135deg, #7c5cff, #4dd4ff);
-    display: grid; place-items: center; font-size: 22px;
+    object-fit: cover; display: block;
   }
   h1 { font-size: 21px; margin: 0; }
   .sub { color: var(--muted); font-size: 12px; margin-top: 3px; }
@@ -106,7 +105,7 @@
 <body>
 <div class="wrap">
   <header>
-    <div class="logo">🐳</div>
+    <img class="logo" src="icon-192.png" alt="TideCove">
     <div>
       <h1>TideCove 配置</h1>
       <div class="sub">电脑端控制台 · 每 3 秒自动刷新</div>
@@ -116,9 +115,9 @@
   <div class="card">
     <h2>服务器地址</h2>
     <div class="row">
-      <span class="label">公网</span>
-      <span class="val" id="publicUrl">—</span>
-      <button class="copy" data-copy="publicUrl">复制</button>
+      <span class="label">Tailscale</span>
+      <span class="val" id="tailscaleUrl">—</span>
+      <button class="copy" data-copy="tailscaleUrl">复制</button>
     </div>
     <div class="row">
       <span class="label">局域网</span>
@@ -130,7 +129,7 @@
       <span class="val dim" id="localUrl">—</span>
       <button class="copy" data-copy="localUrl">复制</button>
     </div>
-    <div class="hint">手机装 APK 后，第一次打开填「公网」这个地址。地址每次重启隧道会变，以这里为准。</div>
+    <div class="hint">手机装 APK 后，第一次打开填「Tailscale」这个地址（手机也要装 Tailscale 并登录同一账号，重启不变）。没装 Tailscale 就用「局域网」地址，手机和电脑连同一个 Wi-Fi。</div>
   </div>
 
   <div class="card codebox">
@@ -149,7 +148,7 @@
       <div class="stat"><span class="dot" id="dotPair"></span><span class="k">绑定</span><span class="v" id="vPair">—</span></div>
       <div class="stat"><span class="dot" id="dotDsh"></span><span class="k">DSH</span><span class="v" id="vDsh">—</span></div>
       <div class="stat"><span class="dot" id="dotStream"></span><span class="k">事件流</span><span class="v" id="vStream">—</span></div>
-      <div class="stat"><span class="dot" id="dotPub"></span><span class="k">公网隧道</span><span class="v" id="vPub">—</span></div>
+      <div class="stat"><span class="dot" id="dotPub"></span><span class="k">Tailscale</span><span class="v" id="vPub">—</span></div>
     </div>
     <div class="hint" id="deviceHint"></div>
     <div class="btnrow" style="justify-content:flex-start;margin-top:14px">
@@ -244,8 +243,8 @@ async function poll() {
     return;
   }
 
-  $('#publicUrl').textContent = info.publicUrl || '（隧道没启动）';
-  $('#publicUrl').classList.toggle('dim', !info.publicUrl);
+  $('#tailscaleUrl').textContent = info.tailscaleUrl || '（没检测到 Tailscale）';
+  $('#tailscaleUrl').classList.toggle('dim', !info.tailscaleUrl);
   $('#lanUrl').textContent = info.lanUrl;
   $('#localUrl').textContent = info.localUrl;
 
@@ -268,7 +267,7 @@ async function poll() {
   setDot('dotPair', info.paired ? 'ok' : 'warn', info.paired ? '已绑定' : '未绑定');
   setDot('dotDsh', info.dshReady ? 'ok' : 'err', info.dshReady ? '就绪' : '未连接');
   setDot('dotStream', info.streamReady ? 'ok' : 'err', info.streamReady ? '在线' : '离线');
-  setDot('dotPub', info.publicUrl ? 'ok' : 'err', info.publicUrl ? '在线' : '未启动');
+  setDot('dotPub', info.tailscaleUrl ? 'ok' : 'err', info.tailscaleUrl ? '在线' : '未连接');
 
   $('#deviceHint').textContent = info.paired
     ? ('当前设备：' + (info.deviceName || '未知') + '（' + new Date(info.pairedAt).toLocaleString('zh-CN', { hour12: false }) + ' 绑定）')

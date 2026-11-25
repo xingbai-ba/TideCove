@@ -381,6 +381,7 @@
     padding: 0 !important;
   }
   .msg.me .bubble:has(> .imgwrap) { background: transparent !important; }
+  .msg-name { font-size: 11px; color: var(--muted); margin: 0 0 4px 0; letter-spacing: .04em; opacity: .85; }
   .msg.ai .bubble { font-size: var(--size-ai, 15px); }
   .msg.me .bubble { font-size: var(--size-me, 15px); }
 
@@ -493,6 +494,7 @@
     border-top-right-radius: 6px;
     box-shadow: 0 4px 14px rgba(var(--accent-rgb), .22);
   }
+  .msg-name { font-size: 11px; color: var(--muted); margin: 0 0 4px 0; letter-spacing: .04em; opacity: .85; }
   .msg.ai .bubble {
     background: var(--bubble-ai); border: 1px solid var(--edge);
     border-top-left-radius: 6px;
@@ -603,7 +605,7 @@
     <div class="name" id="hdrName">主人</div>
     <div class="sub" id="sub">连接中…</div>
   </div>
-  <button id="aiBtn" class="ai-btn" title="切换 AI"><span id="aiBtnName">星汐</span></button>
+  <button id="aiBtn" class="ai-btn" title="切换 AI"><span id="aiBtnName">AI</span></button>
   <div class="dot wait" id="dot"></div>
   <button id="settingsBtn" class="icon-btn" title="设置">⚙</button>
 </header>
@@ -731,9 +733,9 @@
     <div class="page" id="page-ai">
       <div class="profile">
         <div class="set-avatar" id="aiAvatarView"><img src="/icon-192.png" alt=""></div>
-        <div class="set-nick" id="aiNickView">小鱼</div>
+        <div class="set-nick" id="aiNickView">AI</div>
         <input type="file" id="aiAvatarFile" accept="image/*" hidden>
-        <input type="text" id="aiNickInput" maxlength="12" placeholder="小鱼" hidden>
+        <input type="text" id="aiNickInput" maxlength="12" placeholder="AI" hidden>
       </div>
       <div class="set-row">
         <label>对方的气泡颜色</label>
@@ -749,7 +751,7 @@
       <div class="themes" id="themes"></div>
     </div>
 
-    <div class="set-ver">TideCove 1.3.7</div>
+    <div class="set-ver">TideCove 1.3.24</div>
   </div>
 </div>
 
@@ -855,7 +857,7 @@ function notifyIncoming(text) {
   try { navigator.vibrate?.([70, 45, 70]); } catch { /* 没权限就算了 */ }
   flashTitle();
   if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-    try { new Notification((loadSettings().aiNick || '小鱼'), { body: String(text).slice(0, 80), tag: 'tidecove', renotify: true }); } catch { /* ignore */ }
+    try { new Notification((loadSettings().aiNick || 'AI'), { body: String(text).slice(0, 80), tag: 'tidecove', renotify: true }); } catch { /* ignore */ }
   }
 }
 
@@ -1259,6 +1261,16 @@ function refreshAvatars() {
       }
       return;
     }
+    // 群聊里每条消息挂着自己的 AI：用各自的头像，别被"当前 AI"覆盖
+    const bubbleAi = old.getAttribute('data-ai');
+    if (bubbleAi) {
+      const p = (s.aiProfiles && typeof s.aiProfiles === 'object' ? s.aiProfiles[bubbleAi] : null) || {};
+      const src = p.avatar || AI_ICONS[bubbleAi] || '/icon-192.png';
+      const img2 = old.querySelector('img');
+      if (img2) { if (img2.getAttribute('src') !== src) img2.src = src; }
+      else old.innerHTML = '<img src="' + src + '" alt="">';
+      return;
+    }
     const img = old.querySelector('img');
     if (img) { if (img.getAttribute('src') !== aiSrc) img.src = aiSrc; }
     else old.innerHTML = '<img src="' + aiSrc + '" alt="">';
@@ -1273,20 +1285,29 @@ function paintThemeDots() {
   });
 }
 
-function avatarFor(role) {
+function avatarFor(role, aiId) {
   const s = loadSettings();
   if (role === 'user') {
     if (s.meAvatar) return '<div class="avatar me"><img src="' + s.meAvatar + '" alt=""></div>';
     return '<div class="avatar me">' + esc((s.meNick || '主').slice(0, 1)) + '</div>';
   }
+  // 群聊里指定了是谁：用它自己的头像（私聊里设过的），加载失败就退回昵称首字
+  if (aiId) {
+    const all = (s.aiProfiles && typeof s.aiProfiles === 'object') ? s.aiProfiles : {};
+    const p = all[aiId] || {};
+    const src = p.avatar || AI_ICONS[aiId] || '/icon-192.png';
+    const initial = esc(String(aiDisplayName(aiId) || aiId).slice(0, 1));
+    return '<div class="avatar ai" data-ai="' + esc(aiId) + '"><img src="' + src + '" alt=""'
+      + ' onerror="this.style.display=\'none\';this.parentNode.textContent=\'' + initial + '\'"></div>';
+  }
   // AI 头像只认「当前 AI 的独立设置 / 它自己的图标」，不再回落到旧的全局 aiAvatar
   return '<div class="avatar ai"><img src="' + aiAvatarSrc() + '" alt=""></div>';
 }
 
-function renderMessage(role, text, extra = {}, animate = true) {
+function renderMessage(role, text, extra = {}, animate = true, aiId = null) {
   const div = document.createElement('div');
   div.className = 'msg ' + (role === 'user' ? 'me' : 'ai') + (animate ? ' anim' : '');
-  div.innerHTML = avatarFor(role);
+  div.innerHTML = avatarFor(role, aiId);
   const b = document.createElement('div');
   b.className = 'bubble';
   let html = esc(text);
@@ -1308,7 +1329,8 @@ function renderMessage(role, text, extra = {}, animate = true) {
       + '<span class="vdur">' + (dur > 0 ? dur + '"' : '…') + '</span>'
       + '</div>';
   }
-  b.innerHTML = html;
+  // 群聊里在气泡内部顶部标出是谁说的（不参与外层 flex，免得把气泡挤到右边）
+  b.innerHTML = (aiId && role !== 'user' ? '<div class="msg-name">' + esc(aiDisplayName(aiId)) + '</div>' : '') + html;
   div.appendChild(b);
   if (extra.ts) {
     const m = document.createElement('div');
@@ -1324,11 +1346,19 @@ function renderMessage(role, text, extra = {}, animate = true) {
   return div;
 }
 
-function typingBubble() {
+function parseMentionAi(text) {
+  const MAP = [['DeepSeek', 'dsh'], ['Claude', 'claude'], ['ChatGPT', 'codex'], ['Kimi', 'kimi'], ['Gemini', 'gemini']];
+  for (const [n, id] of MAP) {
+    if (text.includes('@' + n) || text.includes('＠' + n)) return id;
+  }
+  return null;
+}
+
+function typingBubble(aiId) {
   const div = document.createElement('div');
   div.className = 'msg ai anim';
   div.id = 'typing';
-  div.innerHTML = avatarFor('ai') + '<div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div>';
+  div.innerHTML = avatarFor('ai', aiId || null) + '<div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div>';
   chatEl.appendChild(div);
   scrollBottom();
   return div;
@@ -1410,6 +1440,9 @@ function enterChat(st) {
   $('#chat').classList.remove('hidden');
   $('#bar').classList.remove('hidden');
   setStatus('在线', '');
+  // 进聊天先按当前 AI（含聚合）把胶囊画对，别停在 HTML 里的默认"AI"
+  renderAiBtn();
+  renderAiPanel();
   loadHistory();
   pullSettings();
   loadAIs();
@@ -1435,6 +1468,13 @@ function buildMsgEls(it) {
   const frag = document.createDocumentFragment();
   const showText = ((it.text === '[图片]' && it.images?.length) || it.audio) ? '' : it.text;
   const role = it.role === 'user' ? 'user' : 'ai';
+  // 群聊历史：按当时的分段还原，每个 AI 自己一条（各自头像/昵称）
+  if (it.segments && it.segments.length) {
+    for (const seg of it.segments) {
+      frag.appendChild(renderMessage(role, seg.text, { ts: it.ts }, false, seg.ai));
+    }
+    return frag;
+  }
   const segs = splitSentences(showText);
   if (!segs.length) {
     frag.appendChild(renderMessage(role, showText, it, false));
@@ -1688,16 +1728,28 @@ async function flushSendBatch() {
   pendingImages = [];
   sendBatchTimer = null;
 
-  const t = typingBubble();
+  const t = typingBubble(parseMentionAi(text));
   try {
     const r = await api('/api/chat', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: store.token, text, images, ai: curAi }),
     });
+    if (r && r.silent) { t.remove(); return; }
     // 拿到回复后再愣 3-10 秒（真人不会秒回）
     // 用绝对时间等：切后台冻结定时器也不影响，回来立刻补上
     const thinkMs = 3000 + Math.random() * 7000;
     await waitUntil(Date.now() + thinkMs);
+    // 群聊（聚合）：每个 AI 各自一条气泡，用各自的头像
+    if (r.segments && r.segments.length) {
+      t.remove();
+      for (let i = 0; i < r.segments.length; i++) {
+        const seg = r.segments[i];
+        // 第一个立刻出，后面的隔一会儿（像真的在挨个回）
+        if (i > 0) await waitUntil(Date.now() + 700 + Math.random() * 600);
+        renderMessage('ai', seg.text, { ts: Date.now() }, true, seg.ai);
+      }
+      return;
+    }
     // 注意：不能 t.remove()，renderSegments 要靠它原地变身
     renderSegments('ai', r.reply, { images: r.images, audio: r.audio, ts: Date.now() }, t);
   } catch (e) {
@@ -2165,7 +2217,7 @@ async function sendVoice(blob, durationSec) {
 
   renderMessage('user', '', { audio: localUrl, duration: dur, transcript: transcript, ts: Date.now() });
 
-  const t = typingBubble();
+  const t = typingBubble(parseMentionAi(text));
   try {
     const r2 = await api('/api/chat', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2313,7 +2365,7 @@ const COLORS = ['#6d4dfa', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#ec4899'
   }
 
   const paintMe = setupProfile({ viewId: 'meAvatarView', nickId: 'meNickView', fileId: 'meAvatarFile', inputId: 'meNickInput', defaultNick: '主人', key: 'me' });
-  const paintAi = setupProfile({ viewId: 'aiAvatarView', nickId: 'aiNickView', fileId: 'aiAvatarFile', inputId: 'aiNickInput', defaultNick: '小鱼', key: 'ai' });
+  const paintAi = setupProfile({ viewId: 'aiAvatarView', nickId: 'aiNickView', fileId: 'aiAvatarFile', inputId: 'aiNickInput', defaultNick: 'AI', key: 'ai' });
 
   // 颜色板
   function setupColors(elId, key, fallback) {
@@ -2689,10 +2741,11 @@ function aiAvatarSrc() {
 /** 这个 AI 现在该用的昵称 */
 function aiDisplayName(id) {
   const target = id || curAi;
-  if (target === curAi) {
-    const p = aiProfile();
-    if (p.nick) return p.nick;
-  }
+  const s = loadSettings();
+  const all = (s.aiProfiles && typeof s.aiProfiles === 'object') ? s.aiProfiles : {};
+  const p = all[target] || {};
+  if (p.nick) return p.nick; // 每个 AI 自己的昵称，不管当前切到谁
+  if (target === 'all') return '聚合';
   return target === 'dsh' ? 'DeepSeek' : aiName(target);
 }
 
@@ -2717,7 +2770,7 @@ function migrateAiProfiles() {
 
 function renderAiBtn() {
   const el = document.getElementById('aiBtnName');
-  if (el) el.textContent = aiName(curAi);
+  if (el) el.textContent = aiDisplayName(curAi);
 }
 
 function aiStatusText(p) {
@@ -2735,7 +2788,11 @@ function aiStatusClass(p) {
 function renderAiPanel() {
   const box = document.getElementById('aiList');
   if (!box) return;
-  box.innerHTML = aiList.map((p) =>
+  const allItem = '<div class="ai-item' + (curAi === 'all' ? ' on' : '') + '" data-ai="all">'
+    + '<span>✦ 聚合</span>'
+    + '<span class="st on">所有 AI</span>'
+  + '</div>';
+  box.innerHTML = allItem + aiList.map((p) =>
     '<div class="ai-item' + (p.id === curAi ? ' on' : '') + (p.status === 'off' ? ' dim' : '') + '" data-ai="' + p.id + '">'
       + '<span>' + (p.status === 'online' ? '●' : '○') + ' ' + p.name + '</span>'
       + '<span class="st ' + aiStatusClass(p) + '">' + aiStatusText(p) + '</span>'
@@ -2744,7 +2801,8 @@ function renderAiPanel() {
 }
 
 function setAi(id) {
-  const p = aiList.find((x) => x.id === id);
+  let p = aiList.find((x) => x.id === id);
+  if (id === 'all') p = { id: 'all', name: '聚合', available: true };
   if (!p || !p.available) {
     tcToast((p ? p.name : id) + ' 现在用不了' + (p && p.reason ? '：' + p.reason : ''), 3200);
     return;
@@ -2755,6 +2813,9 @@ function setAi(id) {
   renderAiPanel();
   const panel = document.getElementById('aiPanel');
   if (panel) panel.classList.remove('show');
+  // 群聊（聚合）没有"当前 AI"的设置，藏掉右上角齿轮
+  const gear = document.getElementById('settingsBtn');
+  if (gear) gear.style.display = id === 'all' ? 'none' : '';
   // 切 AI = 换一整套外观：头像 / 昵称 / 气泡色 / 字号 / 背景都换成它的
   migrateAiProfiles();
   applySettings();
@@ -2773,14 +2834,16 @@ async function loadAIs() {
   try {
     const r = await api('/api/ai/providers?token=' + encodeURIComponent(store.token));
     aiList = r.providers || [];
-    if (!aiList.some((x) => x.id === curAi && x.available)) {
+    // 'all'（聚合）不是 aiList 里的项，但不能因此被重置成 DeepSeek
+    if (curAi !== 'all' && !aiList.some((x) => x.id === curAi && x.available)) {
       curAi = (aiList.find((x) => x.available) || { id: 'dsh' }).id;
     }
     renderAiBtn();
     renderAiPanel();
+    refreshAvatars();
     // 首屏让出 1.2 秒，再把别的会话悄悄预热
     setTimeout(preloadOtherHistories, 1200);
-  } catch (e) { /* 静默失败，默认还是星汐 */ }
+  } catch (e) { /* 静默失败，默认还是AI */ }
 }
 
 (function initAiPicker() {
@@ -3448,7 +3511,7 @@ window.__onNativePick = async function (dataUrl) {
               + '</div></div>';
           }
           return '<div class="diary-text">'
-            + (it.who === 'ai' ? '<span class="diary-who">' + esc(loadSettings().aiNick || '小鱼') + '</span>' : '')
+            + (it.who === 'ai' ? '<span class="diary-who">' + esc(aiDisplayName(it.ai || 'dsh')) + '</span>' : '')
             + '<span class="dtxt">' + esc(it.text) + '</span>'
             + '<span class="dact">'
             + '<button class="dbtn" data-act="edit" data-ts="' + ts + '" title="编辑" aria-label="编辑">'
@@ -3573,6 +3636,56 @@ window.__onNativePick = async function (dataUrl) {
   window.__renderDiary = renderDiary;
 
   paintProfile();
+
+  // ── 群聊里的 @ 提及 ──
+  (function initMention() {
+    const ta = document.getElementById('input');
+    if (!ta) return;
+    const box = document.createElement('div');
+    box.id = 'mentionBox';
+    box.style.cssText = 'position:fixed;z-index:80;display:none;background:rgba(18,26,44,.97);border:1px solid rgba(120,170,240,.32);border-radius:10px;padding:6px;min-width:150px;box-shadow:0 10px 28px rgba(0,0,0,.55);backdrop-filter:blur(8px)';
+    document.body.appendChild(box);
+    const NAMES = ['DeepSeek', 'Claude', 'ChatGPT', 'Kimi', 'Gemini'];
+    function hide() { box.style.display = 'none'; }
+    function show() {
+      box.innerHTML = NAMES.map(function (n) {
+        return '<div data-name="' + n + '" style="padding:7px 12px;font-size:13px;color:#cfe4ff;cursor:pointer;border-radius:6px">@' + n + '</div>';
+      }).join('');
+      box.querySelectorAll('div').forEach(function (el) {
+        el.onmouseenter = function () { el.style.background = 'rgba(70,130,220,.28)'; };
+        el.onmouseleave = function () { el.style.background = 'transparent'; };
+      });
+      const r = ta.getBoundingClientRect();
+      box.style.left = r.left + 'px';
+      box.style.top = (r.top - 6) + 'px';
+      box.style.transform = 'translateY(-100%)';
+      box.style.display = 'block';
+    }
+    ta.addEventListener('input', function () {
+      if (curAi !== 'all') { hide(); return; }
+      const pos = ta.selectionStart || 0;
+      const before = ta.value.slice(0, pos);
+      if (/@[^\s@]{0,6}$/.test(before)) show(); else hide();
+    });
+    box.addEventListener('click', function (e) {
+      const it = e.target.closest('div[data-name]');
+      if (!it) return;
+      const name = it.getAttribute('data-name');
+      const pos = ta.selectionStart || ta.value.length;
+      const before = ta.value.slice(0, pos);
+      const at = before.lastIndexOf('@');
+      if (at >= 0) {
+        ta.value = ta.value.slice(0, at) + '@' + name + ' ' + ta.value.slice(pos);
+        const np = at + name.length + 2;
+        ta.setSelectionRange(np, np);
+      }
+      hide();
+      ta.focus();
+    });
+    document.addEventListener('click', function (e) {
+      if (!box.contains(e.target) && e.target !== ta) hide();
+    });
+  })();
 })();
 </script>
 

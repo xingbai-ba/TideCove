@@ -3,7 +3,7 @@ cd /d "%~dp0"
 set "TIDECOVE_ROOT=%~dp0TideGleam"
 
 echo.
-echo   TideCove x TideGleam 1.3.0
+echo   TideCove x TideGleam 1.3.24
 echo   ---------------------------------
 echo   Starting server...
 echo.
